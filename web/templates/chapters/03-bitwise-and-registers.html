@@ -1,0 +1,90 @@
+{{- define "chapter-bitwise-and-registers" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A register is just <em>32 switches</em></h2>
+  <p class="subhead">A hardware register is a row of bits living at a fixed memory address. Each bit is a tiny switch wired to something real — a pin, a mode, an enable. To control the chip, you flip the right switches without disturbing the others.</p>
+  <p>Three operations do almost everything. Each uses a <em>mask</em> — a number with 1s in the positions you care about — and a bitwise operator:</p>
+  <ul>
+    <li><strong>Set</strong> a bit: <code>reg |= (1 &lt;&lt; n)</code> — OR forces the bit to 1.</li>
+    <li><strong>Clear</strong> a bit: <code>reg &amp;= ~(1 &lt;&lt; n)</code> — AND with an inverted mask forces it to 0.</li>
+    <li><strong>Toggle</strong> a bit: <code>reg ^= (1 &lt;&lt; n)</code> — XOR flips it.</li>
+  </ul>
+  <div class="note">Why masks instead of just assigning <code>reg = 0x20</code>? Because a direct write clobbers all 32 bits. Read-modify-write with a mask touches only what you mean to.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Flip the bits <em>yourself</em></h2>
+  <p class="subhead">Tap any bit to toggle it, or pick a bit number and use the operators. Watch the hex and decimal values update live — this is exactly what your C code is doing to a real address.</p>
+
+  <div class="interactive"
+       x-data="{
+         reg: 0,
+         sel: 5,
+         mask() { return (1 << this.sel) >>> 0; },
+         isSet(i) { return ((this.reg >>> i) & 1) === 1; },
+         toggleBit(i) { this.reg = (this.reg ^ (1 << i)) >>> 0; },
+         setBit()   { this.reg = (this.reg | this.mask()) >>> 0; },
+         clearBit() { this.reg = (this.reg & ~this.mask()) >>> 0; },
+         togBit()   { this.reg = (this.reg ^ this.mask()) >>> 0; },
+         hex() { return '0x' + (this.reg >>> 0).toString(16).toUpperCase().padStart(8,'0'); },
+         dec() { return (this.reg >>> 0).toString(); }
+       }">
+    <div class="interactive-label">Live 32-bit register · tap a bit</div>
+
+    <!-- bits 31..0, left to right -->
+    <div class="bit-grid">
+      <template x-for="i in 32" :key="i">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="bit" :class="{ set: isSet(32 - i) }" @click="toggleBit(32 - i)" x-text="isSet(32 - i) ? '1' : '0'"></div>
+          <div class="bit-index" x-text="32 - i"></div>
+        </div>
+      </template>
+    </div>
+
+    <div class="controls" style="margin-top:18px;">
+      <span class="readout">bit n =
+        <select x-model.number="sel" style="font-family:inherit;font-size:14px;padding:4px;border:1.5px solid var(--rule);">
+          <template x-for="n in 32" :key="n"><option :value="n-1" x-text="n-1"></option></template>
+        </select>
+      </span>
+      <button class="btn" @click="setBit()">SET — reg |= (1&lt;&lt;n)</button>
+      <button class="btn" @click="clearBit()">CLEAR — reg &amp;= ~(1&lt;&lt;n)</button>
+      <button class="btn" @click="togBit()">TOGGLE — reg ^= (1&lt;&lt;n)</button>
+      <button class="btn btn-accent" @click="reg = 0">RESET</button>
+    </div>
+
+    <div class="controls" style="gap:24px;">
+      <span class="readout">hex&nbsp; <span class="val" x-text="hex()"></span></span>
+      <span class="readout">dec&nbsp; <span class="val" x-text="dec()"></span></span>
+      <span class="readout">mask <span class="val" x-text="'0x' + mask().toString(16).toUpperCase()"></span></span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>Try this:</strong> set bit 5, then bit 7 — the value becomes <code>0xA0</code>. Now clear bit 5 and notice bit 7 survives untouched. That surgical precision is the entire reason embedded code lives and breathes bitwise operators.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>The classic real-world <em>idiom</em></h2>
+  <p class="subhead">Datasheets give you bit positions by name. Firmware turns those names into masks. Here's the shape you'll see in nearly every driver you ever read:</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 150" role="img" aria-label="Named bit fields mapped onto a register">
+      <g font-family="IBM Plex Mono, monospace" font-size="11">
+        <rect x="40"  y="40" width="90" height="40" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/><text x="85"  y="65" text-anchor="middle" fill="#1A1814">ENABLE</text>
+        <rect x="130" y="40" width="90" height="40" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/><text x="175" y="65" text-anchor="middle" fill="#1A1814">MODE</text>
+        <rect x="220" y="40" width="160" height="40" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="300" y="65" text-anchor="middle" fill="#4A4339">reserved</text>
+        <rect x="380" y="40" width="90" height="40" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="425" y="65" text-anchor="middle" fill="#FBF8F2">SPEED</text>
+        <rect x="470" y="40" width="90" height="40" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/><text x="515" y="65" text-anchor="middle" fill="#FBF8F2">FLAG</text>
+      </g>
+      <text x="300" y="110" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">One 32-bit word, carved into named fields — each owned by a different feature.</text>
+      <text x="300" y="130" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#B8521E">GPIOA-&gt;MODER |= (1 &lt;&lt; ENABLE_Pos);</text>
+    </svg>
+  </div>
+  <div class="takeaway"><strong>The habit:</strong> never assign a whole register when you mean one field. Reach for <code>|=</code>, <code>&amp;= ~</code>, and <code>^=</code> with a named mask, and the other features sharing that register keep working.</div>
+</section>
+
+{{- end -}}

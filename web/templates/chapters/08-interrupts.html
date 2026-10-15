@@ -1,0 +1,172 @@
+{{- define "chapter-interrupts" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Stop asking — let the hardware <em>tap you on the shoulder</em></h2>
+  <p class="subhead">There are two ways for your CPU to find out that a button was pressed or a byte arrived. It can ask, over and over, forever — that's polling. Or it can get on with other work and trust the peripheral to interrupt it the instant something happens. The second way is almost always the right one.</p>
+  <p>Polling means a tight loop that reads a status bit and spins until it flips: <code>while (!(USART1-&gt;SR &amp; USART_SR_RXNE)) { }</code>. Simple, but the core burns every cycle checking a thing that hasn't happened yet — and it can't sleep, so the battery drains for nothing.</p>
+  <p>With an interrupt you arm the peripheral once, then walk away. When the event fires, the CPU drops what it's doing, runs a short handler, and resumes. Between events it can run useful background code or enter a low-power sleep state and wake on the very signal it cares about.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 250" role="img" aria-label="Polling busy-loop versus interrupt-driven CPU that can sleep">
+      <!-- POLLING side -->
+      <text x="30" y="32" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.12em">POLLING</text>
+      <rect x="30" y="46" width="240" height="150" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+      <!-- spinning loop -->
+      <circle cx="110" cy="120" r="44" fill="none" stroke="#B8521E" stroke-width="1.5"/>
+      <path d="M 110 76 A 44 44 0 1 1 70 104" fill="none" stroke="#B8521E" stroke-width="1.5"/>
+      <path d="M 70 104 l -6 -10 l 12 1 z" fill="#B8521E"/>
+      <text x="110" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">ready?</text>
+      <text x="110" y="132" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">no.</text>
+      <text x="200" y="100" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">CPU spins,</text>
+      <text x="200" y="116" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">100% busy,</text>
+      <text x="200" y="132" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">can't sleep.</text>
+      <text x="150" y="182" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">wasted cycles, wasted watts</text>
+
+      <!-- INTERRUPT side -->
+      <text x="330" y="32" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#5C8A4E" letter-spacing="0.12em">INTERRUPT-DRIVEN</text>
+      <rect x="330" y="46" width="240" height="150" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+      <rect x="350" y="70" width="90" height="40" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="395" y="88" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">CPU</text>
+      <text x="395" y="102" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#FBF8F2">sleep / work</text>
+      <rect x="350" y="140" width="90" height="36" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="395" y="162" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#1A1814">peripheral</text>
+      <!-- the tap -->
+      <line x1="395" y1="140" x2="395" y2="110" stroke="#B8521E" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <path d="M 395 110 l -5 9 l 10 0 z" fill="#B8521E"/>
+      <text x="480" y="92" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">event taps</text>
+      <text x="480" y="108" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">the CPU only</text>
+      <text x="480" y="124" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">when it matters</text>
+      <text x="450" y="186" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#5C8A4E">idle until needed</text>
+
+      <text x="300" y="228" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">Same outcome — but only one of these lets the chip nap between events.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The trade:</strong> polling is dead simple and predictable, so it's fine for a quick check or a tight real-time loop you fully own. But for anything bursty, rare, or battery-sensitive — a keypress, an incoming byte, a timer tick — interrupts let the CPU stop wasting cycles and actually rest.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>The NVIC routes the signal, the <em>stack remembers</em></h2>
+  <p class="subhead">On a Cortex-M, every interrupt funnels through one piece of hardware: the NVIC, the Nested Vectored Interrupt Controller. It tracks which interrupts are pending, decides which one wins when several arrive, and lets a more urgent interrupt preempt one already running — that's the "nested" part.</p>
+  <p>Two ideas do the heavy lifting. The <em>vector table</em> is a fixed array at the start of flash: slot N holds the address of the handler for IRQ N. When IRQ N fires, the hardware reads slot N and jumps there — no <code>if/else</code> dispatch, the lookup is wired in. And each interrupt has a <em>priority</em> number, where lower means more urgent. A priority-1 timer can interrupt a priority-3 UART handler mid-flight; the UART resumes once the timer's handler returns.</p>
+
+  <div class="interactive"
+       x-data="{
+         step: 0,
+         steps: [
+           { title: 'main() running',      caption: 'Your background code is executing normally — a loop, a state machine, or just a sleep waiting for something to happen. The CPU has no idea an interrupt is coming.' },
+           { title: 'IRQ asserted',        caption: 'A peripheral fires — say a timer overflows. It raises its IRQ line, and the NVIC sets the matching pending bit. The request is now waiting at the gate.' },
+           { title: 'context stacked',     caption: 'The CPU finishes its current instruction, then hardware automatically pushes the context (PC, PSR, and the caller-saved registers R0-R3, R12, LR) onto the stack. No code of yours runs to do this.' },
+           { title: 'vector lookup + jump',caption: 'The NVIC hands the CPU the exception number. Hardware reads that slot of the vector table to get the ISR address and loads it into the PC — execution jumps straight into your handler.' },
+           { title: 'ISR runs',            caption: 'Your handler runs. Keep it short: clear the interrupt flag in the peripheral (so it does not re-fire), do the bare minimum, set a volatile flag for main to pick up later.' },
+           { title: 'context restored',    caption: 'The ISR returns via the special EXC_RETURN value in LR. Hardware pops the saved context off the stack and main resumes at the exact instruction it was about to run — as if nothing happened.' }
+         ],
+         atStart() { return this.step === 0; },
+         atEnd() { return this.step === this.steps.length - 1; },
+         next() { if (!this.atEnd()) this.step++; },
+         prev() { if (!this.atStart()) this.step--; },
+         markerY() { return this.step >= 2 &amp;&amp; this.step <= 4 ? 150 : 70; }
+       }">
+    <div class="interactive-label">Step through one interrupt, start to finish</div>
+
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 600 230" role="img" aria-label="Two-track diagram: main code track and ISR track, with execution marker moving between them">
+        <!-- MAIN track -->
+        <text x="30" y="56" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">MAIN</text>
+        <rect x="90" y="44" width="470" height="34" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.2"/>
+        <line x1="320" y1="44" x2="320" y2="78" stroke="#4A4339" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="200" y="66" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">background code . . .</text>
+        <text x="440" y="66" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">. . . resumes here</text>
+
+        <!-- ISR track -->
+        <text x="30" y="166" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">ISR</text>
+        <rect x="90" y="134" width="470" height="34" fill="#FFD89C" stroke="#1A1814" stroke-width="1.2"/>
+        <text x="325" y="156" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">TIM2_IRQHandler() — clear flag, set work flag</text>
+
+        <!-- stack push/pop arrows down/up at the boundary -->
+        <line x1="320" y1="78" x2="320" y2="134" stroke="#B8521E" stroke-width="1.5"
+              :stroke-dasharray="step === 2 ? '0' : '4 3'"/>
+        <text x="350" y="106" font-family="IBM Plex Sans" font-size="9" fill="#B8521E"
+              x-show="step === 2">push context ↓</text>
+        <text x="350" y="118" font-family="IBM Plex Sans" font-size="9" fill="#5C8A4E"
+              x-show="step === 5">pop context ↑</text>
+
+        <!-- IRQ tap (peripheral -> NVIC) -->
+        <text x="200" y="30" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#B8521E"
+              x-show="step === 1">timer overflow → NVIC pending bit set</text>
+
+        <!-- execution marker -->
+        <circle cx="320" :cy="markerY()" r="9" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"
+                style="transition: cy 0.25s ease;"/>
+        <circle cx="320" :cy="markerY()" r="3" fill="#FBF8F2"/>
+      </svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn" @click="prev()" :disabled="atStart()">◂ PREV</button>
+      <button class="btn btn-accent" @click="next()" :disabled="atEnd()">NEXT ▸</button>
+      <span class="readout">step <span class="val" x-text="step"></span> · <span class="val" x-text="steps[step].title"></span></span>
+    </div>
+
+    <div class="step-dots">
+      <template x-for="(s, i) in steps" :key="i">
+        <span class="step-dot" :class="{ active: i === step, done: i < step }"></span>
+      </template>
+    </div>
+
+    <div class="step-caption" x-text="steps[step].caption"></div>
+  </div>
+
+  <div class="note">
+    All of the stacking and unstacking — pushing PC, PSR, and the caller-saved registers, then restoring them — is done by the Cortex-M hardware, not by your code. That's why you can write an ISR as an ordinary C function with no special prologue: the silicon already saved everything that mattered.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Keep the ISR short — and <em>mind the shared data</em></h2>
+  <p class="subhead">An ISR steals the CPU from whatever was running. The longer it stays, the more it delays main and any lower-priority interrupt waiting behind it. So the rule is brutal and simple: do the urgent minimum, then get out.</p>
+  <p>The clean pattern is a handoff. The ISR clears its flag, records what happened, and sets a single <code>volatile</code> variable. Main polls that flag at its own pace and does the slow work — parsing, math, anything that doesn't have to happen <em>right now</em>.</p>
+  <p>Two traps wait here. First, anything an ISR and main both touch must be <code>volatile</code>, or the compiler may cache it in a register and never see the ISR's update. Second, <code>volatile</code> alone does not make access atomic: <code>count++</code> is read-modify-write, three instructions, and an interrupt landing in the middle corrupts it. For multi-byte shared state, either keep one side a sole writer or briefly disable interrupts around the access.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 200" role="img" aria-label="ISR sets a volatile flag, main does the slow work">
+      <!-- ISR box -->
+      <rect x="30" y="40" width="200" height="110" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="130" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">ISR — fast</text>
+      <text x="50" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">clear the flag bit</text>
+      <text x="50" y="94" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">grab the byte</text>
+      <text x="50" y="116" font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">ready = 1;</text>
+      <text x="130" y="142" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" font-style="italic" fill="#4A4339">in and out in microseconds</text>
+
+      <!-- volatile flag in the middle -->
+      <rect x="255" y="78" width="90" height="36" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="300" y="95" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">volatile</text>
+      <text x="300" y="108" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">ready</text>
+      <line x1="230" y1="96" x2="255" y2="96" stroke="#1A1814" stroke-width="1.5"/>
+      <path d="M 255 96 l -9 -4 l 0 8 z" fill="#1A1814"/>
+      <line x1="345" y1="96" x2="370" y2="96" stroke="#1A1814" stroke-width="1.5"/>
+      <path d="M 370 96 l -9 -4 l 0 8 z" fill="#1A1814"/>
+
+      <!-- main box -->
+      <rect x="370" y="40" width="200" height="110" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="470" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#5C8A4E">main — slow</text>
+      <text x="388" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">if (ready) {</text>
+      <text x="398" y="94" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">process(byte);</text>
+      <text x="398" y="116" font-family="IBM Plex Mono, monospace" font-size="10" fill="#FBF8F2">ready = 0;</text>
+      <text x="470" y="142" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" font-style="italic" fill="#FBF8F2">takes its time, no deadline</text>
+
+      <text x="300" y="180" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">The ISR raises a hand; main does the heavy lifting on its own schedule.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The discipline:</strong> an ISR that's short, clears its own flag, and only sets a <code>volatile</code> flag for main is the pattern that keeps embedded systems responsive and bug-free. Long handlers and unguarded shared variables are the source of the nastiest, hardest-to-reproduce bugs in firmware — set a flag, do the work in main.
+  </div>
+</section>
+
+{{- end -}}

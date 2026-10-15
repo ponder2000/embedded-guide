@@ -1,0 +1,166 @@
+{{- define "chapter-bits-and-bytes" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>From a single <em>bit</em> to a whole <em>byte</em></h2>
+  <p class="subhead">A bit is the smallest thing a computer can hold: just <code>0</code> or <code>1</code>, off or on, low or high. Group four bits and you get a <em>nibble</em>; group eight and you get a <em>byte</em> — the unit almost everything in embedded is measured in. Each position in a byte carries a fixed power-of-two weight, and the value is simply the sum of the weights wherever a bit is set.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 260" role="img" aria-label="An 8-bit byte with place values 128 to 1, decoding 0b10110100 as 180">
+      <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.12em">ONE BYTE = 8 BITS</text>
+      <text x="600" y="28" text-anchor="end" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">two nibbles, side by side</text>
+
+      <!-- place value row -->
+      <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#4A4339" text-anchor="middle">
+        <text x="60"  y="58">128</text>
+        <text x="130" y="58">64</text>
+        <text x="200" y="58">32</text>
+        <text x="270" y="58">16</text>
+        <text x="340" y="58">8</text>
+        <text x="410" y="58">4</text>
+        <text x="480" y="58">2</text>
+        <text x="550" y="58">1</text>
+      </g>
+
+      <!-- the 8 cells: 1 0 1 1 0 1 0 0 -->
+      <g font-family="IBM Plex Mono, monospace" font-size="22" font-weight="700" text-anchor="middle">
+        <rect x="30"  y="70" width="60" height="64" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="60"  y="110" fill="#B8521E">1</text>
+        <rect x="100" y="70" width="60" height="64" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="130" y="110" fill="#4A4339">0</text>
+        <rect x="170" y="70" width="60" height="64" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="200" y="110" fill="#B8521E">1</text>
+        <rect x="240" y="70" width="60" height="64" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="270" y="110" fill="#B8521E">1</text>
+        <rect x="310" y="70" width="60" height="64" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="340" y="110" fill="#4A4339">0</text>
+        <rect x="380" y="70" width="60" height="64" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="410" y="110" fill="#B8521E">1</text>
+        <rect x="450" y="70" width="60" height="64" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="480" y="110" fill="#4A4339">0</text>
+        <rect x="520" y="70" width="60" height="64" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="550" y="110" fill="#4A4339">0</text>
+      </g>
+
+      <!-- bit index labels -->
+      <g font-family="IBM Plex Mono, monospace" font-size="9" fill="#4A4339" text-anchor="middle">
+        <text x="60"  y="150">bit 7</text>
+        <text x="130" y="150">6</text>
+        <text x="200" y="150">5</text>
+        <text x="270" y="150">4</text>
+        <text x="340" y="150">3</text>
+        <text x="410" y="150">2</text>
+        <text x="480" y="150">1</text>
+        <text x="550" y="150">bit 0</text>
+      </g>
+      <text x="60"  y="168" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" font-style="italic" fill="#4A4339">MSB</text>
+      <text x="550" y="168" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" font-style="italic" fill="#4A4339">LSB</text>
+
+      <!-- the sum -->
+      <line x1="30" y1="188" x2="590" y2="188" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="30" y="214" font-family="IBM Plex Mono, monospace" font-size="13" fill="#1A1814">0b10110100</text>
+      <text x="200" y="214" font-family="IBM Plex Mono, monospace" font-size="13" fill="#4A4339">= 128 + 32 + 16 + 4</text>
+      <text x="440" y="214" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="700" fill="#5C8A4E">= 180</text>
+      <text x="30" y="240" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#4A4339">Add up the place value under every cell that holds a 1. That sum is the byte.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The core mechanic:</strong> a byte holds 256 distinct patterns (2⁸), so an unsigned byte counts <code>0</code> to <code>255</code>. Reading one is pure addition — the high (left) bits are worth the most, the low (right) bits the least. Get comfortable here; every register, every address, every pixel of memory is just bytes wearing different labels.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Hex: a compact <em>shorthand</em> for binary</h2>
+  <p class="subhead">Writing <code>10110100</code> by hand is error-prone — miscount one digit and you mean something else entirely. Hexadecimal fixes this elegantly: because one hex digit spans exactly four bits (a nibble), a whole byte collapses into just two tidy characters. Hex isn't a different kind of number, it's the same bits viewed four at a time.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 270" role="img" aria-label="The byte 0xB4 split into two nibbles, 1011 mapping to B and 0100 mapping to 4">
+      <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.12em">ONE HEX DIGIT = ONE NIBBLE (4 BITS)</text>
+
+      <!-- high nibble -->
+      <text x="150" y="58" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">high nibble</text>
+      <g font-family="IBM Plex Mono, monospace" font-size="20" font-weight="700" text-anchor="middle">
+        <rect x="40"  y="68" width="55" height="58" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="67"  y="105" fill="#B8521E">1</text>
+        <rect x="95"  y="68" width="55" height="58" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="122" y="105" fill="#4A4339">0</text>
+        <rect x="150" y="68" width="55" height="58" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="177" y="105" fill="#B8521E">1</text>
+        <rect x="205" y="68" width="55" height="58" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="232" y="105" fill="#B8521E">1</text>
+      </g>
+      <text x="150" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">8 + 2 + 1 = 11</text>
+
+      <!-- low nibble -->
+      <text x="450" y="58" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">low nibble</text>
+      <g font-family="IBM Plex Mono, monospace" font-size="20" font-weight="700" text-anchor="middle">
+        <rect x="340" y="68" width="55" height="58" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="367" y="105" fill="#4A4339">0</text>
+        <rect x="395" y="68" width="55" height="58" fill="#FFD89C" stroke="#B8521E" stroke-width="1.5"/><text x="422" y="105" fill="#B8521E">1</text>
+        <rect x="450" y="68" width="55" height="58" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="477" y="105" fill="#4A4339">0</text>
+        <rect x="505" y="68" width="55" height="58" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/><text x="532" y="105" fill="#4A4339">0</text>
+      </g>
+      <text x="450" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">4 = 4</text>
+
+      <!-- arrows down to hex digits -->
+      <text x="150" y="172" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#B8521E" font-weight="700">↓</text>
+      <text x="450" y="172" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#B8521E" font-weight="700">↓</text>
+
+      <!-- hex digit boxes -->
+      <rect x="110" y="182" width="80" height="56" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="150" y="220" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="28" font-weight="700" fill="#FBF8F2">B</text>
+      <text x="150" y="254" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">11 → B</text>
+
+      <rect x="410" y="182" width="80" height="56" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="450" y="220" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="28" font-weight="700" fill="#FBF8F2">4</text>
+      <text x="450" y="254" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">4 → 4</text>
+
+      <!-- combined result -->
+      <text x="300" y="200" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#1A1814">=</text>
+      <rect x="250" y="206" width="100" height="34" fill="#FFD89C" stroke="#B8521E" stroke-width="2"/>
+      <text x="300" y="231" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="700" fill="#B8521E">0xB4</text>
+    </svg>
+  </div>
+
+  <p>The hex digits run <code>0</code>–<code>9</code> then <code>A</code>–<code>F</code> for the values ten through fifteen, covering all sixteen patterns a nibble can take. So <code>0xB4</code>, <code>0b10110100</code>, and decimal <code>180</code> are three spellings of one identical byte. The leading <code>0x</code> is just C's way of saying "read what follows as hex."</p>
+
+  <div class="note">
+    This is why embedded code is drenched in hex. A 32-bit peripheral address like <code>0x40021000</code> or a config value like <code>0xFF00</code> maps cleanly onto the bit layout in the datasheet — each hex digit lines up with four bits of a register, so you can read field boundaries at a glance instead of squinting at thirty-two ones and zeros.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Negative numbers and the <em>wrap-around</em></h2>
+  <p class="subhead">Bits don't carry a minus sign, so how does a byte hold &minus;1? The answer is <em>two's complement</em>: the most significant bit is repurposed as a sign, and the rest of the range folds around. It's the scheme nearly every CPU uses, because addition and subtraction "just work" on it with no special hardware.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 250" role="img" aria-label="A signed 8-bit number line showing 0x00 to 0x7F as 0 to 127, then 0x80 to 0xFF wrapping to minus 128 to minus 1">
+      <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.12em">int8_t · TOP BIT IS THE SIGN</text>
+
+      <!-- positive half -->
+      <rect x="40" y="50" width="250" height="50" fill="#FBF8F2" stroke="#5C8A4E" stroke-width="1.5"/>
+      <text x="165" y="72" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#5C8A4E" font-weight="600">top bit = 0  →  positive</text>
+      <text x="165" y="90" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">0x00..0x7F  =  0 .. +127</text>
+
+      <!-- negative half -->
+      <rect x="330" y="50" width="250" height="50" fill="#FBF8F2" stroke="#B8521E" stroke-width="1.5"/>
+      <text x="455" y="72" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#B8521E" font-weight="600">top bit = 1  →  negative</text>
+      <text x="455" y="90" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">0x80..0xFF  =  &minus;128 .. &minus;1</text>
+
+      <!-- the wheel / wrap arc -->
+      <path d="M 290 120 C 290 160, 330 160, 330 120" fill="none" stroke="#1A1814" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <path d="M 580 120 C 580 175, 40 175, 40 120" fill="none" stroke="#B8521E" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+      <!-- key landmark values -->
+      <g font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="middle">
+        <rect x="40"  y="105" width="62" height="34" fill="#FFD89C" stroke="#1A1814" stroke-width="1.2"/><text x="71"  y="120" fill="#1A1814">0x00</text><text x="71" y="134" fill="#5C8A4E" font-weight="700">0</text>
+        <rect x="228" y="105" width="62" height="34" fill="#FFD89C" stroke="#1A1814" stroke-width="1.2"/><text x="259" y="120" fill="#1A1814">0x7F</text><text x="259" y="134" fill="#5C8A4E" font-weight="700">+127</text>
+        <rect x="330" y="105" width="62" height="34" fill="#E8A47C" stroke="#1A1814" stroke-width="1.2"/><text x="361" y="120" fill="#1A1814">0x80</text><text x="361" y="134" fill="#B8521E" font-weight="700">&minus;128</text>
+        <rect x="518" y="105" width="62" height="34" fill="#E8A47C" stroke="#1A1814" stroke-width="1.2"/><text x="549" y="120" fill="#1A1814">0xFF</text><text x="549" y="134" fill="#B8521E" font-weight="700">&minus;1</text>
+      </g>
+
+      <!-- overflow callout -->
+      <text x="310" y="200" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" fill="#B8521E" font-weight="700">+127 + 1  →  &minus;128</text>
+      <text x="310" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#4A4339">0x7F + 1 = 0x80: the count rolls right off the top and back to the bottom.</text>
+      <text x="310" y="240" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">The orange arc is the wrap; the same bits, read as unsigned, would just be 128.</text>
+    </svg>
+  </div>
+
+  <p>Mechanically, to negate a number you flip every bit and add one: <code>1</code> is <code>0x01</code>, its inverse is <code>0xFE</code>, plus one is <code>0xFF</code> — which is exactly how &minus;1 is stored. The beauty is that ordinary binary addition of <code>+5</code> and <code>&minus;5</code> overflows cleanly to zero, so the ALU needs no separate "subtract" logic.</p>
+
+  <div class="takeaway">
+    <strong>Why this bites on small MCUs:</strong> the same byte is <code>0..255</code> as a <code>uint8_t</code> but <code>&minus;128..127</code> as an <code>int8_t</code> — identical bits, different meaning. On an 8-bit micro a loop counter that hits <code>255</code> and increments wraps to <code>0</code>; a signed sensor sum past <code>+127</code> flips negative. Overflow here isn't theoretical — pick your width and signedness deliberately, because the silicon will wrap without a word of warning.
+  </div>
+</section>
+
+{{- end -}}

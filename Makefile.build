@@ -1,0 +1,3 @@
+# Compatibility entrypoint for static release builds. There are no server
+# binaries to deploy; upload the contents of OUT to a static host.
+include Makefile

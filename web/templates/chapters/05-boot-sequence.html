@@ -1,0 +1,180 @@
+{{- define "chapter-boot-sequence" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>The chip wakes up at a <em>fixed address</em></h2>
+  <p class="subhead">When power rises, the CPU has no concept of your program. It does exactly one thing it was hard-wired to do at the factory: read two words from the very start of flash. Those two words — the <em>vector table</em> — are the whole reason a cold chip ever finds your code.</p>
+  <p>On a Cortex-M, flash is mapped at <code>0x08000000</code>, and the first entries of the vector table live right there:</p>
+  <ul>
+    <li><strong>Offset 0</strong> — the initial <em>Stack Pointer</em> (where the stack will grow from).</li>
+    <li><strong>Offset 4</strong> — the address of <code>Reset_Handler</code>, the first instruction the CPU runs.</li>
+    <li><strong>Offset 8 and up</strong> — one address per interrupt: NMI, HardFault, then every peripheral IRQ.</li>
+  </ul>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 320" role="img" aria-label="Vector table at the start of flash: stack pointer at offset 0, reset handler at offset 4, then interrupt handlers">
+      <text x="300" y="26" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.15em">VECTOR TABLE · START OF FLASH</text>
+
+      <!-- offset 0: initial SP -->
+      <rect x="120" y="44" width="280" height="44" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="134" y="71" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">initial Stack Pointer</text>
+      <text x="120" y="71" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339" dx="-8">[0]</text>
+
+      <!-- offset 4: Reset_Handler -->
+      <rect x="120" y="88" width="280" height="44" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="134" y="115" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#FBF8F2">&amp;Reset_Handler</text>
+      <text x="120" y="115" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339" dx="-8">[1]</text>
+
+      <!-- offset 8: NMI -->
+      <rect x="120" y="132" width="280" height="38" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="134" y="156" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">&amp;NMI_Handler</text>
+      <text x="120" y="156" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339" dx="-8">[2]</text>
+
+      <!-- offset 12: HardFault -->
+      <rect x="120" y="170" width="280" height="38" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="134" y="194" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">&amp;HardFault_Handler</text>
+      <text x="120" y="194" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339" dx="-8">[3]</text>
+
+      <!-- IRQs -->
+      <rect x="120" y="208" width="280" height="44" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="260" y="235" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#1A1814">… one entry per peripheral IRQ …</text>
+      <text x="120" y="235" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339" dx="-8">[4..]</text>
+
+      <!-- address labels -->
+      <text x="408" y="71"  font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E">0x08000000</text>
+      <text x="408" y="115" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E">0x08000004</text>
+      <text x="408" y="156" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0x08000008</text>
+      <text x="408" y="194" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0x0800000C</text>
+
+      <text x="300" y="284" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">The CPU reads <tspan font-weight="600" fill="#B8521E">[0]</tspan> into SP and jumps to <tspan font-weight="600" fill="#B8521E">[1]</tspan> — all in hardware, before a single line of your C runs.</text>
+      <text x="300" y="304" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#4A4339">This table's layout is fixed by the silicon; your linker script places it first.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The key idea:</strong> the chip doesn't "look for" your program — it dutifully reads two fixed words and follows them. Get the vector table wrong (or place it at the wrong address) and the CPU jumps into garbage on the very first cycle.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Walk the boot, <em>one move at a time</em></h2>
+  <p class="subhead">Between power-on and your first line of <code>main()</code> there's a short, strict choreography. Step through it below — each move highlights the stage doing the work, and the caption tells you exactly what's happening to SP, flash, and RAM.</p>
+
+  <div class="interactive"
+       x-data="{
+         step: 0,
+         steps: [
+           { title: 'Power on / reset',          caption: 'Power rises. The CPU loads its initial Stack Pointer from vector table[0] at 0x08000000 — straight into the SP register, in hardware.' },
+           { title: 'Jump to Reset_Handler',     caption: 'The CPU loads the Reset_Handler address from vector table[1] and jumps to it. This is the first instruction of YOUR image to run — but main() is still far off.' },
+           { title: 'Copy .data → RAM',           caption: 'Startup code copies the .data section (initialised globals, e.g. int x = 7;) from its image in flash into RAM, so those variables hold their values.' },
+           { title: 'Zero .bss',                  caption: 'Startup code zeroes the .bss section in RAM — every uninitialised global (and static) becomes 0, exactly as C promises.' },
+           { title: 'System / clock init',        caption: 'Optionally, SystemInit() runs: switch to the fast clock, set flash wait-states, enable the FPU. The chip is now running at full speed.' },
+           { title: 'Call main()',                caption: 'With the stack set, globals initialised, and clocks running, the startup code finally calls main(). The C world your program assumed now actually exists.' }
+         ]
+       }">
+    <div class="interactive-label">Boot sequence stepper</div>
+
+    <div class="diagram-wrap" style="background:#fff;border:none;padding:8px 0;">
+      <svg viewBox="0 0 600 220" role="img" aria-label="Boot stages: reset, jump, copy data, zero bss, clock init, main">
+        <!-- FLASH / RAM labels -->
+        <text x="90"  y="22" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#B8521E" letter-spacing="0.12em">FLASH</text>
+        <text x="510" y="22" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#B8521E" letter-spacing="0.12em">RAM</text>
+
+        <!-- vector table (active on steps 0,1) -->
+        <rect x="20" y="34" width="140" height="56" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 0 || step === 1 ? '#FFD89C' : '#FBF8F2'"/>
+        <text x="90" y="58" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#1A1814">vectors</text>
+        <text x="90" y="74" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#4A4339">[0] SP · [1] Reset</text>
+
+        <!-- .data image in flash (active step 2) -->
+        <rect x="20" y="98" width="140" height="48" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 2 ? '#E8A47C' : '#FBF8F2'"/>
+        <text x="90" y="120" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#1A1814">.data init</text>
+        <text x="90" y="135" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#4A4339">values in flash</text>
+
+        <!-- CPU (active steps 1,4) -->
+        <rect x="245" y="60" width="110" height="80" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 1 || step === 4 ? '#B8521E' : '#1A1814'"/>
+        <text x="300" y="92" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#FBF8F2">CPU</text>
+        <text x="300" y="110" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#FFD89C" x-text="'step ' + (step + 1)"></text>
+        <text x="300" y="126" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" font-style="italic" fill="#E8A47C"
+              x-text="step === 5 ? 'in main()' : (step === 0 ? 'cold start' : 'startup')"></text>
+
+        <!-- .data dest in RAM (active step 2) -->
+        <rect x="440" y="50" width="140" height="40" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 2 ? '#E8A47C' : '#FBF8F2'"/>
+        <text x="510" y="70" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#1A1814">.data</text>
+        <text x="510" y="83" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#4A4339">copied globals</text>
+
+        <!-- .bss in RAM (active step 3) -->
+        <rect x="440" y="94" width="140" height="40" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 3 ? '#5C8A4E' : '#FBF8F2'"/>
+        <text x="510" y="114" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600"
+              :fill="step === 3 ? '#FBF8F2' : '#1A1814'">.bss</text>
+        <text x="510" y="127" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5"
+              :fill="step === 3 ? '#FBF8F2' : '#4A4339'">zeroed</text>
+
+        <!-- stack in RAM (active step 0) -->
+        <rect x="440" y="138" width="140" height="40" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 0 ? '#FFD89C' : '#FBF8F2'"/>
+        <text x="510" y="158" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#1A1814">stack</text>
+        <text x="510" y="171" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#4A4339">SP loaded here</text>
+
+        <!-- main banner (active step 5) -->
+        <rect x="200" y="170" width="200" height="36" stroke="#1A1814" stroke-width="1.5"
+              :fill="step === 5 ? '#5C8A4E' : '#FBF8F2'"/>
+        <text x="300" y="193" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600"
+              :fill="step === 5 ? '#FBF8F2' : '#4A4339'">main()</text>
+      </svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn" :disabled="step === 0" @click="step = Math.max(step - 1, 0)">◂ PREV</button>
+      <button class="btn btn-accent" :disabled="step === steps.length - 1" @click="step = Math.min(step + 1, steps.length - 1)">NEXT ▸</button>
+      <div class="step-dots">
+        <template x-for="(s, i) in steps" :key="i">
+          <span class="step-dot" :class="{ active: i === step, done: i < step }"></span>
+        </template>
+      </div>
+      <span class="readout">step <span class="val" x-text="(step + 1) + ' / ' + steps.length"></span></span>
+    </div>
+
+    <div class="step-caption">
+      <strong x-text="steps[step].title"></strong> — <span x-text="steps[step].caption"></span>
+    </div>
+  </div>
+
+  <div class="note">
+    Steps 0 and 1 are pure hardware — the silicon does them before fetching any instruction of yours. Steps 2 through 5 are software: the <code>Reset_Handler</code> running real instructions. That handler <em>is</em> the C runtime startup.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>The startup code you never <em>wrote</em></h2>
+  <p class="subhead">You almost never type the vector table or the <code>.data</code>/<code>.bss</code> loops by hand. Your toolchain ships them — a <code>startup_*.s</code> file and a linker script — generated for your exact chip. They quietly assemble the world before <code>main()</code> gets a single cycle.</p>
+  <p>And there's a rule that surprises newcomers: on a bare-metal MCU, <code>main()</code> <strong>must never return</strong>. There's no operating system to return <em>to</em>. So your <code>main</code> ends in an infinite loop, and the startup code wraps the call defensively too:</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 580 150" role="img" aria-label="Reset_Handler calls main inside an infinite loop; if main returns, the CPU spins forever">
+      <g font-family="IBM Plex Mono, monospace" font-size="11">
+        <rect x="20"  y="40" width="150" height="50" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/><text x="95"  y="70" text-anchor="middle" fill="#1A1814">Reset_Handler</text>
+        <rect x="215" y="40" width="150" height="50" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="290" y="70" text-anchor="middle" fill="#FBF8F2">main()</text>
+        <rect x="410" y="40" width="150" height="50" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/><text x="485" y="64" text-anchor="middle" fill="#FBF8F2">for(;;)</text><text x="485" y="80" text-anchor="middle" font-size="9" fill="#FFD89C">spin forever</text>
+      </g>
+      <defs>
+        <marker id="arr-startup" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1A1814"/></marker>
+      </defs>
+      <line x1="170" y1="65" x2="213" y2="65" stroke="#1A1814" stroke-width="1.5" marker-end="url(#arr-startup)"/>
+      <line x1="365" y1="65" x2="408" y2="65" stroke="#1A1814" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#arr-startup)"/>
+      <text x="290" y="32" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">calls</text>
+      <text x="487" y="32" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">if main ever returns…</text>
+      <text x="290" y="125" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">There's nowhere to go back to — so the trap loop catches a stray return instead of executing random memory.</text>
+    </svg>
+  </div>
+  <div class="takeaway">
+    <strong>The takeaway:</strong> the boot sequence is small, deterministic, and mostly free — the toolchain generates it for you. Trust it to build the stack, copy <code>.data</code>, and zero <code>.bss</code>; then keep <code>main()</code> looping forever, because on bare metal "the end of the program" is a fault, not a feature.
+  </div>
+</section>
+
+{{- end -}}

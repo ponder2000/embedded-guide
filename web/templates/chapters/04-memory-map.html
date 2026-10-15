@@ -1,0 +1,238 @@
+{{- define "chapter-memory-map" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>One long ruler of <em>addresses</em></h2>
+  <p class="subhead">A 32-bit CPU sees a single, unbroken line of addresses from <code>0x00000000</code> to <code>0xFFFFFFFF</code> — over four billion of them. Nothing in that line is special by itself. What lives at each address is decided by how the chip is wired, and the designers carve the line into regions: flash here, RAM there, peripherals over here.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 460" role="img" aria-label="The 32-bit address space carved into flash, SRAM, peripheral and Cortex-M system regions">
+      <!-- spine of the address ruler -->
+      <text x="30" y="26" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.15em">ONE 32-BIT ADDRESS SPACE</text>
+
+      <!-- top of space -->
+      <text x="250" y="56" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">0xFFFFFFFF</text>
+      <line x1="250" y1="62" x2="600" y2="62" stroke="#1A1814" stroke-width="1.2"/>
+
+      <!-- System / NVIC -->
+      <rect x="250" y="64" width="350" height="56" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="262" y="86" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">Cortex-M System</text>
+      <text x="262" y="102" font-family="IBM Plex Sans" font-size="10" fill="#1A1814">SysTick, NVIC, SCB — the core's own controls</text>
+      <text x="262" y="115" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339" font-style="italic">private peripheral bus</text>
+      <text x="100" y="98" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">0xE0000000</text>
+
+      <!-- gap -->
+      <rect x="250" y="122" width="350" height="34" fill="#FBF8F2" stroke="#1A1814" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="425" y="143" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339" font-style="italic">reserved / external memory</text>
+
+      <!-- Peripherals -->
+      <rect x="250" y="158" width="350" height="56" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="262" y="180" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">Peripherals</text>
+      <text x="262" y="196" font-family="IBM Plex Sans" font-size="10" fill="#1A1814">GPIO, UART, timers, ADC — registers, not memory</text>
+      <text x="262" y="209" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339" font-style="italic">writing here moves real hardware</text>
+      <text x="100" y="192" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">0x40000000</text>
+
+      <!-- gap -->
+      <rect x="250" y="216" width="350" height="34" fill="#FBF8F2" stroke="#1A1814" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="425" y="237" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339" font-style="italic">reserved</text>
+
+      <!-- SRAM -->
+      <rect x="250" y="252" width="350" height="56" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="262" y="274" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#FBF8F2">SRAM</text>
+      <text x="262" y="290" font-family="IBM Plex Sans" font-size="10" fill="#FBF8F2">variables, stack, heap — fast, volatile scratch</text>
+      <text x="262" y="303" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2" font-style="italic">blank at power-on</text>
+      <text x="100" y="286" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">0x20000000</text>
+
+      <!-- gap -->
+      <rect x="250" y="310" width="350" height="34" fill="#FBF8F2" stroke="#1A1814" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="425" y="331" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339" font-style="italic">reserved</text>
+
+      <!-- Flash -->
+      <rect x="250" y="346" width="350" height="56" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="262" y="368" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#FBF8F2">Flash</text>
+      <text x="262" y="384" font-family="IBM Plex Sans" font-size="10" fill="#FBF8F2">your program &amp; constants — non-volatile</text>
+      <text x="262" y="397" font-family="IBM Plex Sans" font-size="9.5" fill="#FFD89C" font-style="italic">the CPU runs code straight from here</text>
+      <text x="100" y="380" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">0x08000000</text>
+
+      <!-- bottom -->
+      <line x1="250" y1="404" x2="600" y2="404" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="250" y="424" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">0x00000000</text>
+
+      <!-- vertical "address grows up" axis -->
+      <line x1="150" y1="404" x2="150" y2="64" stroke="#1A1814" stroke-width="1.2" marker-end="url(#mm-up)"/>
+      <text x="135" y="240" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339" font-style="italic" transform="rotate(-90 135 240)">addresses increase &#8594;</text>
+      <defs>
+        <marker id="mm-up" viewBox="0 0 10 10" refX="5" refY="2" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,10 L5,0 L10,10 z" fill="#1A1814"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The big idea:</strong> there is exactly one address space, and everything plugs into it — code, data, and hardware alike. An address is just a number on the ruler; the silicon decides what answers when the CPU names it. These STM32-style bases (<code>0x08000000</code>, <code>0x20000000</code>, <code>0x40000000</code>, <code>0xE0000000</code>) are worth memorising.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Flash remembers, RAM <em>forgets</em></h2>
+  <p class="subhead">Two physical memories share that ruler. Flash is slow-ish but non-volatile — it holds your firmware and constants across every power cycle. SRAM is fast but volatile — perfect for scratch values that only need to exist while the chip is awake. Each section of your program has a fixed home.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 400" role="img" aria-label="Memory map: flash holding program sections on the left, RAM holding runtime sections on the right">
+      <!-- FLASH side -->
+      <text x="20" y="26" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.15em">FLASH · NON-VOLATILE</text>
+      <text x="20" y="42" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0x08000000 · 256 KB · kept on power-off</text>
+
+      <g>
+        <rect x="20" y="56" width="240" height="42" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="30" y="74" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.vectors</text>
+        <text x="30" y="89" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">stack top, reset &amp; ISR addresses</text>
+
+        <rect x="20" y="98" width="240" height="78" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="30" y="116" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.text</text>
+        <text x="30" y="131" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">your compiled functions</text>
+        <text x="30" y="146" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">(machine-code instructions)</text>
+
+        <rect x="20" y="176" width="240" height="48" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="30" y="194" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.rodata</text>
+        <text x="30" y="209" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">const data, string literals</text>
+
+        <rect x="20" y="224" width="240" height="48" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="30" y="242" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.data (init image)</text>
+        <text x="30" y="257" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">initial values · copied to RAM at boot</text>
+
+        <rect x="20" y="272" width="240" height="86" fill="#F5F0E8" stroke="#1A1814" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="140" y="318" font-family="IBM Plex Sans" font-size="11" fill="#4A4339" text-anchor="middle" font-style="italic">unused flash</text>
+      </g>
+
+      <!-- copy arrow -->
+      <path d="M 260 248 Q 300 248 300 200 Q 300 90 360 86" fill="none" stroke="#B8521E" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#mm2-arrow)"/>
+      <text x="288" y="178" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" font-weight="600" font-style="italic">copy</text>
+      <text x="288" y="191" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" font-style="italic">@boot</text>
+      <defs>
+        <marker id="mm2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#B8521E"/>
+        </marker>
+      </defs>
+
+      <!-- RAM side -->
+      <text x="360" y="26" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.15em">SRAM · VOLATILE</text>
+      <text x="360" y="42" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0x20000000 · 64 KB · blank at power-on</text>
+
+      <g>
+        <rect x="360" y="56" width="240" height="46" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="370" y="74" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.data</text>
+        <text x="370" y="89" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">globals with nonzero init</text>
+
+        <rect x="360" y="102" width="240" height="46" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="370" y="120" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">.bss</text>
+        <text x="370" y="135" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">zero/uninit globals · zeroed at boot</text>
+
+        <rect x="360" y="148" width="240" height="46" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="370" y="166" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#FBF8F2">heap &#8595;</text>
+        <text x="370" y="181" font-family="IBM Plex Sans" font-size="10" fill="#FBF8F2">malloc · grows upward into free space</text>
+
+        <rect x="360" y="194" width="240" height="86" fill="#F5F0E8" stroke="#1A1814" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="480" y="241" font-family="IBM Plex Sans" font-size="11" fill="#4A4339" text-anchor="middle" font-style="italic">free space</text>
+
+        <rect x="360" y="280" width="240" height="58" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="370" y="298" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">stack &#8593;</text>
+        <text x="370" y="313" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">locals, return addrs · grows downward</text>
+        <text x="370" y="328" font-family="IBM Plex Sans" font-size="10" fill="#4A4339" font-style="italic">SP starts at the top of RAM</text>
+      </g>
+
+      <!-- collision arrows -->
+      <line x1="480" y1="194" x2="480" y2="212" stroke="#1A1814" stroke-width="1.2" marker-end="url(#mm2-arrow2)"/>
+      <line x1="480" y1="280" x2="480" y2="262" stroke="#1A1814" stroke-width="1.2" marker-end="url(#mm2-arrow2)"/>
+      <defs>
+        <marker id="mm2-arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1A1814"/>
+        </marker>
+      </defs>
+      <text x="480" y="358" font-family="IBM Plex Sans" font-size="9" fill="#4A4339" text-anchor="middle" font-style="italic">heap rising, stack falling — if they meet, you overflow</text>
+    </svg>
+  </div>
+
+  <p>Notice the two memories grow toward each other inside RAM: the <strong>stack grows down</strong> from the top of SRAM as functions call functions, while the <strong>heap grows up</strong> from above your globals. They share one pool of free space, so a runaway recursion or a leaky allocator can quietly let them collide.</p>
+
+  <div class="takeaway">
+    <strong>Why <code>.bss</code> costs no flash:</strong> a zero-initialised global has no value worth storing — startup code just zeroes that RAM region in a loop. Nonzero initial values must live in flash as the <code>.data</code> image and get copied into RAM before <code>main()</code> runs.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>When an address <em>is</em> a wire</h2>
+  <p class="subhead">Here is the trick that makes embedded magical: peripheral registers are not memory at all. They are circuits that happen to answer to an address. Write a value to the right address and you don't store a number — you change the physical world. A bit you set in a GPIO register becomes a voltage on a pin.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 320" role="img" aria-label="A CPU write to a GPIO register address routed through the bus to a peripheral that drives an LED pin high">
+      <!-- CPU -->
+      <rect x="20" y="120" width="130" height="80" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="85" y="150" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">CPU</text>
+      <text x="85" y="170" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">runs your store</text>
+      <text x="85" y="184" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">instruction</text>
+
+      <!-- the write -->
+      <text x="20" y="50" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.1em">THE WRITE</text>
+      <rect x="20" y="58" width="360" height="40" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="32" y="84" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">*(volatile uint32_t*)0x40020014 = 0x20;</text>
+
+      <!-- bus -->
+      <line x1="150" y1="160" x2="270" y2="160" stroke="#1A1814" stroke-width="1.5" marker-end="url(#mm3-arrow)"/>
+      <text x="210" y="152" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" font-weight="600">bus</text>
+      <text x="210" y="178" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339" font-style="italic">addr 0x40020014</text>
+
+      <!-- decoder -->
+      <rect x="270" y="118" width="20" height="84" fill="#E8A47C" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="280" y="225" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#4A4339">decoder picks the peripheral</text>
+
+      <!-- GPIO peripheral -->
+      <rect x="320" y="110" width="180" height="100" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="410" y="132" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">GPIOD · ODR</text>
+      <text x="410" y="147" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">output data register</text>
+      <!-- mini bit row, bit5 set -->
+      <g font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600">
+        <rect x="338" y="160" width="22" height="26" fill="#FBF8F2" stroke="#1A1814" stroke-width="1"/><text x="349" y="178" text-anchor="middle" fill="#4A4339">0</text>
+        <rect x="362" y="160" width="22" height="26" fill="#FBF8F2" stroke="#1A1814" stroke-width="1"/><text x="373" y="178" text-anchor="middle" fill="#4A4339">0</text>
+        <rect x="386" y="160" width="22" height="26" fill="#B8521E" stroke="#1A1814" stroke-width="1"/><text x="397" y="178" text-anchor="middle" fill="#FBF8F2">1</text>
+        <rect x="410" y="160" width="22" height="26" fill="#FBF8F2" stroke="#1A1814" stroke-width="1"/><text x="421" y="178" text-anchor="middle" fill="#4A4339">0</text>
+        <rect x="434" y="160" width="22" height="26" fill="#FBF8F2" stroke="#1A1814" stroke-width="1"/><text x="445" y="178" text-anchor="middle" fill="#4A4339">0</text>
+        <rect x="458" y="160" width="22" height="26" fill="#FBF8F2" stroke="#1A1814" stroke-width="1"/><text x="469" y="178" text-anchor="middle" fill="#4A4339">0</text>
+      </g>
+      <text x="397" y="200" text-anchor="middle" font-family="IBM Plex Sans" font-size="8.5" fill="#B8521E" font-weight="600">bit 5 = 1</text>
+
+      <!-- wire to pin -->
+      <line x1="500" y1="173" x2="560" y2="173" stroke="#5C8A4E" stroke-width="2" marker-end="url(#mm3-arrow-g)"/>
+      <text x="530" y="166" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5C8A4E" font-weight="600">PD5</text>
+
+      <!-- LED -->
+      <circle cx="585" cy="173" r="18" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+      <circle cx="585" cy="173" r="26" fill="none" stroke="#E8A47C" stroke-width="1.2" opacity="0.8"/>
+      <text x="585" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339" font-style="italic">LED lit · 3.3 V</text>
+
+      <text x="310" y="280" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">No driver, no syscall. The store instruction itself <tspan font-weight="600" fill="#B8521E">is</tspan> the I/O.</text>
+
+      <defs>
+        <marker id="mm3-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1A1814"/>
+        </marker>
+        <marker id="mm3-arrow-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5C8A4E"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <p>Read that one line carefully. <code>0x40020014</code> is an address in the peripheral region from Section 1. The cast <code>(volatile uint32_t*)</code> tells the compiler "treat this number as a pointer to a 32-bit hardware register," and <code>volatile</code> forbids it from optimising the access away — every write must actually happen, in order, because the side effect is the whole point. Assigning <code>0x20</code> (binary <code>0010 0000</code>) sets bit 5, which drives pin PD5 high.</p>
+
+  <p>This is exactly why the bitwise operators matter. To flip just one pin without disturbing its neighbours you read-modify-write the register: <code>GPIOD-&gt;ODR |= (1 &lt;&lt; 5);</code> sets bit 5, and <code>GPIOD-&gt;ODR &amp;= ~(1 &lt;&lt; 5);</code> clears it. A single bit, a single voltage, a single LED.</p>
+
+  <div class="note">
+    Memory-mapped I/O is the seam between software and the physical world. Once you accept that some addresses are wires rather than storage, the rest of embedded programming is just knowing <em>which</em> address does <em>what</em> — a question every chip answers in its reference manual.
+  </div>
+</section>
+
+{{- end -}}

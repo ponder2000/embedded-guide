@@ -1,0 +1,180 @@
+{{- define "chapter-gpio" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A pin is a <em>register bit</em> in disguise</h2>
+  <p class="subhead">GPIO stands for General-Purpose Input/Output: a physical pin you can read or drive from software. Each pin is wired into a small stack of registers, and bending those bits is the entire job. Tell the pin which direction it faces, then either push a voltage out of it or sample the voltage coming in.</p>
+  <p>On an STM32, every pin belongs to a port (GPIOA, GPIOB, …) and each port is a cluster of 32-bit registers sharing one base address:</p>
+  <ul>
+    <li><strong>MODER</strong> — sets <em>direction</em>: two bits per pin choose input, output, alternate function, or analog.</li>
+    <li><strong>ODR</strong> — the Output Data Register: one bit per pin holds the level you're driving when the pin is an output.</li>
+    <li><strong>IDR</strong> — the Input Data Register: read-only, one bit per pin reflecting the actual voltage at the pad.</li>
+    <li><strong>BSRR</strong> — Bit Set/Reset Register: write-only, the safe way to flip one ODR bit without a read-modify-write.</li>
+  </ul>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 280" role="img" aria-label="A GPIO pin wired through MODER, ODR, IDR and BSRR registers inside the MCU">
+      <!-- MCU boundary -->
+      <rect x="20" y="20" width="380" height="240" fill="#FBF8F2" stroke="#1A1814" stroke-width="2"/>
+      <text x="36" y="44" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.14em">GPIOA · INSIDE THE MCU</text>
+
+      <!-- register stack -->
+      <g font-family="IBM Plex Mono, monospace" font-size="12">
+        <rect x="44" y="62"  width="150" height="34" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/><text x="119" y="84"  text-anchor="middle" fill="#1A1814">MODER</text>
+        <rect x="44" y="104" width="150" height="34" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/><text x="119" y="126" text-anchor="middle" fill="#1A1814">ODR</text>
+        <rect x="44" y="146" width="150" height="34" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="119" y="168" text-anchor="middle" fill="#FBF8F2">IDR</text>
+        <rect x="44" y="188" width="150" height="34" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/><text x="119" y="210" text-anchor="middle" fill="#FBF8F2">BSRR</text>
+      </g>
+      <g font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">
+        <text x="206" y="83">direction</text>
+        <text x="206" y="125">output level</text>
+        <text x="206" y="167" fill="#4A4339">input level (read)</text>
+        <text x="206" y="209">atomic set / reset</text>
+      </g>
+
+      <!-- pin driver block -->
+      <rect x="300" y="104" width="80" height="76" fill="#fff" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="340" y="138" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#1A1814">pin</text>
+      <text x="340" y="152" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#1A1814">driver</text>
+
+      <!-- wires from regs to driver -->
+      <g stroke="#1A1814" stroke-width="1.2">
+        <line x1="194" y1="79"  x2="300" y2="120"/>
+        <line x1="194" y1="121" x2="300" y2="135"/>
+        <line x1="300" y1="160" x2="194" y2="163"/>
+      </g>
+
+      <!-- the physical pin leaving the chip -->
+      <line x1="380" y1="142" x2="460" y2="142" stroke="#1A1814" stroke-width="2"/>
+      <circle cx="460" cy="142" r="6" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="470" y="138" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">PA5</text>
+      <text x="470" y="153" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">physical pad</text>
+
+      <text x="300" y="252" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#4A4339">One pin, one bit in each register — software speaks, the pad obeys.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway"><strong>The mental model:</strong> a pin number is really a bit index. "Pin 5" means bit 5 of GPIOA's registers. Configure MODER once, then live in ODR (or BSRR) for the rest of your program.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>How a pin actually <em>drives</em> a wire</h2>
+  <p class="subhead">An output pin isn't magic — it's a pair of transistors. How they're arranged decides whether the pin can push both voltages or only pull one. Inputs get their own trick: internal resistors so a floating wire reads a defined level.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 240" role="img" aria-label="Push-pull output versus open-drain output with an external pull-up">
+      <!-- push-pull -->
+      <text x="150" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">PUSH-PULL</text>
+      <line x1="150" y1="48" x2="150" y2="70" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="170" y="58" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">VDD</text>
+      <rect x="120" y="70" width="60" height="34" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/><text x="150" y="91" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">P-FET (high)</text>
+      <rect x="120" y="118" width="60" height="34" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="150" y="139" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">N-FET (low)</text>
+      <line x1="150" y1="104" x2="150" y2="118" stroke="#1A1814" stroke-width="1.2"/>
+      <line x1="180" y1="111" x2="240" y2="111" stroke="#1A1814" stroke-width="2"/>
+      <circle cx="240" cy="111" r="5" fill="#B8521E" stroke="#1A1814" stroke-width="1.2"/>
+      <line x1="150" y1="152" x2="150" y2="172" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="150" y="190" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">GND</text>
+      <text x="150" y="214" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">drives high AND low</text>
+
+      <!-- divider -->
+      <line x1="300" y1="40" x2="300" y2="200" stroke="#1A1814" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+      <!-- open-drain -->
+      <text x="440" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">OPEN-DRAIN + PULL-UP</text>
+      <line x1="500" y1="48" x2="500" y2="70" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="510" y="58" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">VDD</text>
+      <rect x="486" y="70" width="28" height="40" fill="#fff" stroke="#1A1814" stroke-width="1.5"/><text x="528" y="94" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">pull-up R</text>
+      <line x1="500" y1="110" x2="500" y2="130" stroke="#1A1814" stroke-width="1.2"/>
+      <line x1="430" y1="130" x2="540" y2="130" stroke="#1A1814" stroke-width="2"/>
+      <circle cx="540" cy="130" r="5" fill="#B8521E" stroke="#1A1814" stroke-width="1.2"/>
+      <rect x="400" y="118" width="60" height="34" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="430" y="139" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">N-FET (low)</text>
+      <line x1="430" y1="152" x2="430" y2="172" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="430" y="190" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">GND</text>
+      <text x="440" y="214" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">pulls low; resistor floats it high</text>
+    </svg>
+  </div>
+
+  <p><strong>Push-pull</strong> uses two transistors so the pin can actively source a high and sink a low — perfect for driving an LED. <strong>Open-drain</strong> only has the lower transistor: it can pull the line to ground or let go, so it needs a <em>pull-up resistor</em> to reach a high. That shared-line behaviour is why I²C buses are open-drain. For <em>inputs</em>, STM32 offers internal pull-up or pull-down resistors (via the PUPDR register) so an unconnected pin reads a known 0 or 1 instead of floating noise.</p>
+
+  <div class="interactive"
+       x-data="{
+         on: false,
+         mode: 'push-pull',
+         odr() { return this.on ? '0020' : '0000'; },
+         modeText() {
+           return this.mode === 'push-pull'
+             ? 'Push-pull: the pin drives both high and low — ideal for an LED tied to ground.'
+             : 'Open-drain: the pin only pulls low; a pull-up resistor supplies the high level.';
+         }
+       }">
+    <div class="interactive-label">Virtual GPIO · drive PA5 → LED</div>
+
+    <div class="controls" style="gap:20px;align-items:center;">
+      <div class="led" :class="{ on: on }"></div>
+      <button class="btn" :class="{ 'is-on': on }" @click="on = !on"
+              x-text="on ? 'PA5 ODR bit = 1' : 'PA5 ODR bit = 0'"></button>
+    </div>
+
+    <div class="controls">
+      <button class="btn" @click="on = true">SET — BSRR = (1&lt;&lt;5)</button>
+      <button class="btn" @click="on = false">RESET — BSRR = (1&lt;&lt;21)</button>
+      <button class="btn" @click="on = !on">TOGGLE — ODR ^= (1&lt;&lt;5)</button>
+    </div>
+
+    <div class="controls" style="gap:10px;align-items:center;">
+      <span class="readout">drive type</span>
+      <select x-model="mode" style="font-family:inherit;font-size:14px;padding:4px;border:1.5px solid var(--rule);">
+        <option value="push-pull">push-pull</option>
+        <option value="open-drain">open-drain</option>
+      </select>
+    </div>
+
+    <div class="controls" style="gap:24px;">
+      <span class="readout">GPIOA-&gt;ODR = <span class="val" x-text="'0x' + odr()"></span></span>
+      <span class="readout">LED <span class="val" x-text="on ? 'ON' : 'OFF'"></span></span>
+    </div>
+
+    <div class="note" x-text="modeText()"></div>
+  </div>
+
+  <div class="takeaway"><strong>Notice:</strong> SET and RESET don't read anything first — BSRR's low half-word sets bits, its high half-word resets them. One write, no race condition, even if an interrupt touches another pin in the same port mid-stride.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>The classic <em>blink</em></h2>
+  <p class="subhead">Everything above collapses into the first program every embedded engineer writes: make an LED on PA5 blink. Configure the direction once, then flip one bit forever. This is "Hello, world" for bare metal.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 220" role="img" aria-label="Blink loop: set MODER to output, then toggle the ODR bit in a loop">
+      <g font-family="IBM Plex Mono, monospace" font-size="12">
+        <rect x="40"  y="40" width="160" height="44" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/><text x="120" y="62" text-anchor="middle" fill="#1A1814">1 · MODER</text><text x="120" y="76" text-anchor="middle" font-size="9" fill="#4A4339" font-family="IBM Plex Sans">set PA5 = output</text>
+        <rect x="40"  y="104" width="160" height="44" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/><text x="120" y="126" text-anchor="middle" fill="#FBF8F2">2 · BSRR set</text><text x="120" y="140" text-anchor="middle" font-size="9" fill="#FBF8F2" font-family="IBM Plex Sans">LED on, delay</text>
+        <rect x="40"  y="168" width="160" height="44" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/><text x="120" y="190" text-anchor="middle" fill="#FBF8F2">3 · BSRR reset</text><text x="120" y="204" text-anchor="middle" font-size="9" fill="#FBF8F2" font-family="IBM Plex Sans">LED off, delay</text>
+      </g>
+      <!-- loop arrow -->
+      <path d="M 200 190 C 250 190 250 126 210 126" fill="none" stroke="#1A1814" stroke-width="1.4"/>
+      <polygon points="210,126 220,121 220,131" fill="#1A1814"/>
+      <text x="262" y="160" font-family="IBM Plex Sans" font-size="10" font-style="italic" fill="#4A4339">repeat forever</text>
+
+      <!-- code lines -->
+      <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">
+        <text x="300" y="58">RCC-&gt;AHB1ENR |= (1 &lt;&lt; 0);   // clock port A</text>
+        <text x="300" y="78">GPIOA-&gt;MODER |= (1 &lt;&lt; 10);  // PA5 = output (bits 11:10 = 01)</text>
+        <text x="300" y="120">while (1) {</text>
+        <text x="316" y="138">GPIOA-&gt;BSRR = (1 &lt;&lt; 5);    // set   — LED on</text>
+        <text x="316" y="156">delay_ms(500);</text>
+        <text x="316" y="174">GPIOA-&gt;BSRR = (1 &lt;&lt; 21);   // reset — LED off</text>
+        <text x="316" y="192">delay_ms(500);</text>
+        <text x="300" y="210">}</text>
+      </g>
+    </svg>
+  </div>
+
+  <p>Don't forget step zero: <code>RCC-&gt;AHB1ENR</code> gates each port's clock, and a port with no clock is deaf — writes silently do nothing. After that, <code>MODER |= (1 &lt;&lt; 10)</code> writes <code>01</code> into the two-bit field for pin 5 (bits 11:10), choosing general-purpose output. From there the loop is pure bit-flipping.</p>
+
+  <div class="takeaway"><strong>Tying it together:</strong> every line here is the bitwise toolkit from earlier — <code>|=</code> to enable, a shifted mask to target one field, BSRR to set and reset without a read-modify-write. Master GPIO and you've learned the rhythm of <em>every</em> peripheral: read the datasheet, find the bits, flip them with intent.</div>
+</section>
+
+{{- end -}}

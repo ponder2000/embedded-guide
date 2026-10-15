@@ -1,0 +1,48 @@
+{{- define "chapter.html" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{ template "head" (printf "%02d · Embedded Guide" .Number) }}
+</head>
+<body x-data>
+{{ template "topbar" (printf "CH %02d / %02d" .Number .Total) }}
+
+<div class="container">
+  <a class="back-toc" href="{{ url "/" }}">← All chapters</a>
+
+  <div class="chapter-eyebrow">Chapter {{ printf "%02d" .Number }} · {{ .Chapter.Part }}</div>
+  <h1 class="chapter-title">{{ safeHTML .Chapter.Title }}</h1>
+
+  <article>
+    {{ partial .Chapter.Template . }}
+  </article>
+
+  <nav class="chapter-nav">
+    {{- if .Prev.Slug }}
+    <a class="nav-card prev" href="{{ url (printf "/chapter/%s/" .Prev.Slug) }}">
+      <div class="dir">← Previous</div>
+      <div class="nav-title">{{ safeHTML .Prev.Title }}</div>
+    </a>
+    {{- else }}
+    <span class="nav-card placeholder"></span>
+    {{- end }}
+    {{- if .Next.Slug }}
+    <a class="nav-card next" href="{{ url (printf "/chapter/%s/" .Next.Slug) }}">
+      <div class="dir">Next →</div>
+      <div class="nav-title">{{ safeHTML .Next.Title }}</div>
+    </a>
+    {{- else }}
+    <a class="nav-card next" href="{{ url "/" }}">
+      <div class="dir">Done →</div>
+      <div class="nav-title">Back to all chapters</div>
+    </a>
+    {{- end }}
+  </nav>
+</div>
+
+{{ template "footer" . }}
+<script src="{{ url "/static/js/alpine.min.js" }}" defer></script>
+<script src="{{ url "/static/js/app.js" }}" defer></script>
+</body>
+</html>
+{{- end -}}

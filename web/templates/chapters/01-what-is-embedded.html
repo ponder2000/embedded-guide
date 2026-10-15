@@ -1,0 +1,89 @@
+{{- define "chapter-what-is-embedded" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A whole computer on <em>one chip</em></h2>
+  <p class="subhead">The laptop on your desk has a CPU, separate RAM sticks, a disk, and an operating system juggling it all. A microcontroller (MCU) folds the essentials of that machine onto a single chip — and usually runs just <em>your</em> program, forever.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 300" role="img" aria-label="Inside a microcontroller: CPU core, flash, RAM and peripherals on one die">
+      <!-- chip outline -->
+      <rect x="20" y="20" width="580" height="260" fill="#FBF8F2" stroke="#1A1814" stroke-width="2"/>
+      <text x="36" y="44" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E" letter-spacing="0.15em">MICROCONTROLLER · ONE SILICON DIE</text>
+
+      <!-- CPU core -->
+      <rect x="40" y="70" width="150" height="90" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="115" y="108" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="700" fill="#1A1814">CPU core</text>
+      <text x="115" y="128" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">fetches &amp; runs</text>
+      <text x="115" y="142" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#4A4339">instructions</text>
+
+      <!-- Flash -->
+      <rect x="220" y="70" width="150" height="40" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="295" y="88" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#1A1814">FLASH</text>
+      <text x="295" y="103" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">your program (kept on power-off)</text>
+
+      <!-- RAM -->
+      <rect x="220" y="120" width="150" height="40" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="295" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#FBF8F2">RAM</text>
+      <text x="295" y="153" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">variables (blank at boot)</text>
+
+      <!-- bus -->
+      <line x1="190" y1="115" x2="220" y2="90" stroke="#1A1814" stroke-width="1.5"/>
+      <line x1="190" y1="115" x2="220" y2="140" stroke="#1A1814" stroke-width="1.5"/>
+
+      <!-- Peripherals -->
+      <text x="400" y="84" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#B8521E" letter-spacing="0.1em">PERIPHERALS</text>
+      <g font-family="IBM Plex Mono, monospace" font-size="10" fill="#1A1814">
+        <rect x="400" y="92"  width="80" height="26" fill="#fff" stroke="#1A1814"/><text x="440" y="109" text-anchor="middle">GPIO</text>
+        <rect x="490" y="92"  width="80" height="26" fill="#fff" stroke="#1A1814"/><text x="530" y="109" text-anchor="middle">TIMER</text>
+        <rect x="400" y="124" width="80" height="26" fill="#fff" stroke="#1A1814"/><text x="440" y="141" text-anchor="middle">UART</text>
+        <rect x="490" y="124" width="80" height="26" fill="#fff" stroke="#1A1814"/><text x="530" y="141" text-anchor="middle">ADC</text>
+      </g>
+
+      <!-- pins -->
+      <g stroke="#1A1814" stroke-width="2">
+        <line x1="20" y1="200" x2="0" y2="200"/><line x1="20" y1="225" x2="0" y2="225"/><line x1="20" y1="250" x2="0" y2="250"/>
+        <line x1="600" y1="200" x2="620" y2="200"/><line x1="600" y1="225" x2="620" y2="225"/><line x1="600" y1="250" x2="620" y2="250"/>
+      </g>
+      <text x="310" y="230" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">Peripherals connect the digital world inside to real pins, voltages, and signals outside.</text>
+      <text x="310" y="258" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">No operating system required — your code <tspan font-weight="600" fill="#B8521E">is</tspan> the system.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The big idea:</strong> an MCU trades raw power for self-sufficiency. A few KB of RAM, some flash, and a handful of peripherals — but it boots in microseconds, costs cents, sips power, and does exactly one job with total predictability.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>MCU vs. the machine on your <em>desk</em></h2>
+  <p class="subhead">Same family tree, wildly different priorities. A desktop optimises for throughput and flexibility; an MCU optimises for cost, power, and determinism.</p>
+
+  <div class="two-col">
+    <div class="col-card">
+      <h4>Your laptop</h4>
+      <p>Gigabytes of RAM · multi-GHz cores · an OS scheduling thousands of processes · storage measured in terabytes · watts of power · boots in tens of seconds.</p>
+    </div>
+    <div class="col-card">
+      <h4>A microcontroller</h4>
+      <p>Kilobytes of RAM · tens of MHz · usually no OS, one program · flash measured in KB · milliwatts · boots in microseconds, runs for years untouched.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    You almost certainly own dozens of MCUs right now — in your car's sensors, your microwave, your earbuds, your toothbrush. They're the most numerous computers on Earth, and the most invisible.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>What "bare-metal" really <em>means</em></h2>
+  <p class="subhead">No operating system stands between you and the hardware. When you write to the right memory address, a real pin changes voltage. That directness is the whole appeal — and the whole challenge — of embedded work.</p>
+  <p>Across the rest of this guide we'll build up from the smallest pieces: how numbers live in bits, how flipping a single bit in a register switches on an LED, how the chip wakes up at power-on, and how it talks to the outside world over UART, SPI, I²C and more. Each idea earns its own picture.</p>
+  <div class="takeaway">
+    <strong>Where we're headed:</strong> by the last chapter, the phrase "set bit 5 of the GPIO output register to turn on the LED" will read like plain English — and you'll know exactly what every word costs in silicon.
+  </div>
+</section>
+
+{{- end -}}

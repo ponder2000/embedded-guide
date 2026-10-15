@@ -1,0 +1,44 @@
+{{- define "home.html" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{ template "head" "Embedded Systems · A Visual Guide" }}
+</head>
+<body>
+{{ template "topbar" "" }}
+
+<div class="container">
+  <header class="page-head">
+    <div class="eyebrow">A chapter-wise visual guide</div>
+    <h1>From <em>bits</em> to a <em>blinking</em> chip</h1>
+    <p class="lede">Embedded systems, one picture at a time. {{ .ChapterNum }} chapters of hand-drawn diagrams and hands-on, animated components — start at the top, or jump to whatever you're curious about.</p>
+  </header>
+
+  <main>
+    {{- range .Parts }}
+    <div class="part">
+      <div class="part-label">{{ .Name }}</div>
+      <ul class="toc-list">
+        {{- range .Chapters }}
+        <li>
+          <a class="toc-card" href="{{ url (printf "/chapter/%s/" .Slug) }}">
+            <span class="toc-num">{{ printf "%02d" .Num }}</span>
+            <span class="toc-body">
+              <h3>{{ safeHTML .Title }}</h3>
+              <p>{{ .Summary }}</p>
+              {{- if .Interactive }}<span class="badge">Interactive</span>{{ end }}
+            </span>
+          </a>
+        </li>
+        {{- end }}
+      </ul>
+    </div>
+    {{- end }}
+  </main>
+</div>
+
+{{ template "footer" . }}
+<script src="{{ url "/static/js/app.js" }}" defer></script>
+</body>
+</html>
+{{- end -}}

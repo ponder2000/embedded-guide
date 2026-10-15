@@ -1,0 +1,196 @@
+{{- define "chapter-timers-pwm" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A timer is a <em>counter that never tires</em></h2>
+  <p class="subhead">Strip away the marketing and a hardware timer is one register that increments on every tick of a clock. Feed it a known rate and it becomes a ruler for time itself — counting up, wrapping around, and nudging your code at exact intervals while the CPU does other work.</p>
+  <p>On an STM32 the peripheral is called <code>TIMx</code>. Three pieces do the work:</p>
+  <ul>
+    <li>The <strong>prescaler</strong> (<code>PSC</code>) divides the incoming clock — the same clock tree you met in the clocks chapter. A 72&nbsp;MHz timer clock with <code>PSC = 71</code> ticks the counter at 1&nbsp;MHz.</li>
+    <li>The <strong>counter</strong> (<code>CNT</code>) climbs one step per tick: 0, 1, 2, &hellip;</li>
+    <li>The <strong>auto-reload</strong> (<code>ARR</code>) is the ceiling. When <code>CNT</code> reaches <code>ARR</code> it wraps back to 0 — an <em>update event</em> — and can fire an interrupt.</li>
+  </ul>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 230" role="img" aria-label="Sawtooth counter ramp climbing from zero to the auto-reload value then wrapping">
+      <!-- axes -->
+      <line x1="50" y1="30" x2="50" y2="180" stroke="#1A1814" stroke-width="1.5"/>
+      <line x1="50" y1="180" x2="560" y2="180" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="50" y="200" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">time (each step = one tick)</text>
+
+      <!-- ARR ceiling -->
+      <line x1="50" y1="50" x2="560" y2="50" stroke="#B8521E" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="556" y="44" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">CNT = ARR  →  wrap + IRQ</text>
+      <text x="44" y="54" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">ARR</text>
+      <text x="44" y="184" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0</text>
+
+      <!-- sawtooth ramps: rise 0->ARR over 150px, drop vertical -->
+      <polyline points="50,180 200,50 200,180 350,50 350,180 500,50 500,180"
+                fill="none" stroke="#1A1814" stroke-width="1.5"/>
+      <!-- update markers -->
+      <circle cx="200" cy="50" r="3.5" fill="#B8521E"/>
+      <circle cx="350" cy="50" r="3.5" fill="#B8521E"/>
+      <circle cx="500" cy="50" r="3.5" fill="#B8521E"/>
+
+      <text x="300" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">CNT ramps up, hits ARR, wraps to 0 — a perfectly periodic sawtooth.</text>
+    </svg>
+  </div>
+
+  <div class="takeaway">
+    <strong>The period in plain arithmetic:</strong> with a timer clock <code>f<sub>tim</sub></code>, one wrap takes <code>(PSC + 1) &times; (ARR + 1) / f<sub>tim</sub></code> seconds. Pick <code>PSC</code> for a convenient tick, then <code>ARR</code> for the period you want.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>PWM is the counter racing a <em>compare value</em></h2>
+  <p class="subhead">Put a second register beside the counter — the capture/compare register <code>CCR</code> — and wire a pin to a simple rule: drive it high while <code>CNT &lt; CCR</code>, low otherwise. As the counter sweeps from 0 to <code>ARR</code> each period, the pin spends a fixed fraction of every cycle high. That fraction is the <em>duty cycle</em>.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 270" role="img" aria-label="Counter ramp crossing a compare threshold to generate a PWM output waveform">
+      <!-- top: ramp + CCR threshold -->
+      <line x1="50" y1="20" x2="50" y2="120" stroke="#1A1814" stroke-width="1.5"/>
+      <line x1="50" y1="120" x2="560" y2="120" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="44" y="124" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0</text>
+      <text x="44" y="34" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">ARR</text>
+
+      <!-- CCR line -->
+      <line x1="50" y1="78" x2="560" y2="78" stroke="#5C8A4E" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="556" y="72" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#5C8A4E">CCR (compare)</text>
+
+      <!-- ramps over two periods, period width 220 -->
+      <polyline points="50,120 200,20 200,120 350,20 350,120" fill="none" stroke="#1A1814" stroke-width="1.5"/>
+      <!-- crossing dots where ramp = CCR (y=78). x where CNT crosses: 50 + (120-78)/(120-20)*150 = 50 + 0.42*150 = 113 -->
+      <circle cx="113" cy="78" r="3.5" fill="#B8521E"/>
+      <circle cx="263" cy="78" r="3.5" fill="#B8521E"/>
+
+      <!-- bottom: output waveform aligned to the same x periods -->
+      <text x="50" y="170" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#B8521E">PIN</text>
+      <line x1="50" y1="240" x2="560" y2="240" stroke="#1A1814" stroke-width="1"/>
+      <!-- high while CNT < CCR: from period start to crossing x. Period 0: 50->113 high, 113->200 low -->
+      <polyline points="50,190 113,190 113,240 200,240 200,190 263,190 263,240 350,240 350,190 413,190 413,240 500,240"
+                fill="none" stroke="#B8521E" stroke-width="1.8"/>
+      <text x="350" y="178" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#4A4339">high while CNT &lt; CCR · low while CNT &ge; CCR</text>
+
+      <!-- guide lines linking crossing to edge -->
+      <line x1="113" y1="78" x2="113" y2="190" stroke="#E8A47C" stroke-width="1" stroke-dasharray="3 3"/>
+      <line x1="200" y1="120" x2="200" y2="240" stroke="#E8A47C" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="300" y="262" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">Move CCR up and the high portion widens — duty = CCR / (ARR + 1).</text>
+    </svg>
+  </div>
+
+  <p>Below, you are the firmware. Drag <code>CCR</code> as a percentage of the period and watch the output pulse and the LED respond exactly as silicon would.</p>
+
+  <div class="interactive"
+       x-data="{
+         duty: 50,
+         period: 100,
+         onTime() { return Math.round(this.period * this.duty / 100); },
+         offTime() { return this.period - this.onTime(); },
+         wavePath() {
+           const x0 = 40, x1 = 560, baseY = 120, topY = 30;
+           const w = x1 - x0;
+           const pw = w * 0.5;            // two periods drawn across the width
+           const cycles = 2;
+           let d = '';
+           for (let c = 0; c &lt; cycles; c++) {
+             const s = x0 + c * pw;
+             const hi = s + pw * this.duty / 100;
+             if (c === 0) d += 'M ' + s + ' ' + (this.duty > 0 ? topY : baseY);
+             else d += ' L ' + s + ' ' + (this.duty > 0 ? topY : baseY);
+             // high segment
+             d += ' L ' + hi + ' ' + (this.duty > 0 ? topY : baseY);
+             // fall to low
+             d += ' L ' + hi + ' ' + baseY;
+             // low segment to end of period
+             d += ' L ' + (s + pw) + ' ' + baseY;
+             // rise for next period start (unless last)
+             if (c &lt; cycles - 1) d += ' L ' + (s + pw) + ' ' + topY;
+           }
+           return d;
+         }
+       }">
+    <div class="interactive-label">PWM dimmer · drag the duty cycle</div>
+
+    <div class="diagram-wrap" style="margin-top:0;">
+      <svg viewBox="0 0 600 170" role="img" aria-label="Live PWM output waveform driven by the duty cycle slider">
+        <line x1="40" y1="20" x2="40" y2="135" stroke="#1A1814" stroke-width="1.5"/>
+        <line x1="40" y1="135" x2="575" y2="135" stroke="#1A1814" stroke-width="1.5"/>
+        <line x1="40" y1="30" x2="560" y2="30" stroke="#5C8A4E" stroke-width="1" stroke-dasharray="4 4"/>
+        <text x="34" y="34" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" fill="#4A4339">3.3V</text>
+        <text x="34" y="124" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" fill="#4A4339">0V</text>
+        <path :d="wavePath()" fill="none" stroke="#B8521E" stroke-width="2"/>
+        <text x="300" y="158" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" font-style="italic" fill="#4A4339">Two periods of the pin voltage — orange high portion grows with duty.</text>
+      </svg>
+    </div>
+
+    <div class="controls" style="gap:16px;">
+      <span class="readout">duty&nbsp; <span class="val" x-text="duty + '%'"></span></span>
+      <span class="readout">on-time&nbsp; <span class="val" x-text="onTime() + ' ticks'"></span></span>
+      <span class="readout">off-time&nbsp; <span class="val" x-text="offTime() + ' ticks'"></span></span>
+    </div>
+
+    <div class="controls" style="gap:18px;">
+      <input type="range" min="0" max="100" step="1" x-model.number="duty" aria-label="duty cycle percent"/>
+      <div class="led on" :style="'opacity:' + (0.15 + duty / 100 * 0.85)"></div>
+    </div>
+
+    <div class="controls" style="gap:18px;">
+      <button class="btn" @click="duty = 0">0%</button>
+      <button class="btn" @click="duty = 25">25%</button>
+      <button class="btn" @click="duty = 50">50%</button>
+      <button class="btn" @click="duty = 75">75%</button>
+      <button class="btn btn-accent" @click="duty = 100">100%</button>
+    </div>
+
+    <div class="controls" style="gap:8px;">
+      <span class="readout" style="font-size:13px;color:var(--ink-soft);font-weight:400;">in C, with ARR = 99:</span>
+      <span class="readout"><code x-text="'TIM3-&gt;CCR1 = ' + onTime() + ';'"></code></span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>Try this:</strong> set duty to 0% and the LED falls dark — the pin never goes high. At 100% it is solid on, pinned high for the whole period. Everything interesting lives in between, where the pin blinks faster than your eye can follow.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Why a square wave can look like a <em>dimmer knob</em></h2>
+  <p class="subhead">The pin only ever outputs 0V or 3.3V — it never sits at half voltage. Yet by flicking between them thousands of times a second, the <em>average</em> voltage lands anywhere you like. Slow things average it for you, and PWM quietly becomes an analog control with none of the analog cost.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 200" role="img" aria-label="Four uses of PWM: LED dimming, motor speed, servo position, and audio">
+      <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">
+        <rect x="30"  y="30" width="125" height="60" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="92"  y="56" text-anchor="middle" font-weight="600">LED dimming</text>
+        <text x="92"  y="74" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">duty = brightness</text>
+
+        <rect x="170" y="30" width="125" height="60" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="232" y="56" text-anchor="middle" font-weight="600">motor speed</text>
+        <text x="232" y="74" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">duty = average drive</text>
+
+        <rect x="310" y="30" width="125" height="60" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="372" y="56" text-anchor="middle" font-weight="600" fill="#FBF8F2">servo angle</text>
+        <text x="372" y="74" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">1–2 ms pulse @ 50 Hz</text>
+
+        <rect x="450" y="30" width="125" height="60" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="512" y="56" text-anchor="middle" font-weight="600" fill="#FBF8F2">audio / tone</text>
+        <text x="512" y="74" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">frequency = pitch</text>
+      </g>
+      <text x="300" y="130" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">Average voltage = duty &times; supply.  A 30% duty on a 3.3V rail averages <tspan font-weight="600" fill="#B8521E">≈ 0.99V</tspan>.</text>
+      <text x="300" y="160" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">The trick is speed: switch faster than the load (or eye) can react, and the ripple disappears.</text>
+      <text x="300" y="184" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#B8521E">__HAL_TIM_SET_COMPARE(&amp;htim3, TIM_CHANNEL_1, ccr);</text>
+    </svg>
+  </div>
+
+  <div class="note">
+    Servos are the odd one out: they care about <em>pulse width</em>, not duty ratio. A 50&nbsp;Hz frame (20&nbsp;ms) with a 1&nbsp;ms high pulse means full left, 1.5&nbsp;ms centre, 2&nbsp;ms full right — same timer, you just hold <code>ARR</code> fixed and vary <code>CCR</code> for the narrow pulse.
+  </div>
+
+  <div class="takeaway">
+    <strong>The whole chapter in one line:</strong> a timer counts time, <code>ARR</code> sets the period, <code>CCR</code> sets the duty, and duty &times; supply is the average voltage you hand to the world — dimming an LED, spinning a motor, or steering a servo from a single pin that only knows on and off.
+  </div>
+</section>
+
+{{- end -}}

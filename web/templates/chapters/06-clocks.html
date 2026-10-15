@@ -1,0 +1,165 @@
+{{- define "chapter-clocks" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Everything marches to a <em>steady beat</em></h2>
+  <p class="subhead">A digital chip is fundamentally synchronous: flip-flops latch new values only on a clock edge. The CPU fetches an instruction, a timer counts up, a UART shifts out a bit — each one happens on a tick. Take the clock away and the silicon simply freezes mid-thought.</p>
+  <p>That heartbeat comes from an <em>oscillator</em>. You usually get a choice of source, and the trade-off is always the same: convenience versus precision.</p>
+  <ul>
+    <li><strong>Internal RC oscillator</strong> (the HSI, ~8&nbsp;MHz on an STM32F1): already on the die, free, instant. But it drifts with temperature and voltage — often ±1% or worse. Fine for blinking an LED, fatal for timing a serial link.</li>
+    <li><strong>External crystal</strong> (the HSE, an 8&nbsp;MHz quartz can soldered beside the chip): costs a part and two pins, takes a few milliseconds to stabilise. In exchange you get accuracy measured in parts-per-<em>million</em>.</li>
+  </ul>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 200" role="img" aria-label="A square-wave clock signal with period and frequency labelled">
+      <!-- axes -->
+      <line x1="40" y1="40" x2="40" y2="150" stroke="#4A4339" stroke-width="1.2"/>
+      <line x1="40" y1="150" x2="560" y2="150" stroke="#4A4339" stroke-width="1.2"/>
+      <text x="34" y="48" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">3.3V</text>
+      <text x="34" y="153" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0V</text>
+
+      <!-- square wave: high at 60, low at 150 -->
+      <polyline points="40,150 40,60 130,60 130,150 220,150 220,60 310,60 310,150 400,150 400,60 490,60 490,150 540,150"
+                fill="none" stroke="#B8521E" stroke-width="1.5"/>
+
+      <!-- period bracket between two rising edges (40 -> 220) -->
+      <line x1="40" y1="172" x2="220" y2="172" stroke="#1A1814" stroke-width="1.2"/>
+      <line x1="40" y1="166" x2="40" y2="178" stroke="#1A1814" stroke-width="1.2"/>
+      <line x1="220" y1="166" x2="220" y2="178" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="130" y="192" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="#1A1814">one period T</text>
+
+      <!-- frequency note -->
+      <text x="400" y="185" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#5C8A4E">f = 1 / T</text>
+      <text x="300" y="30" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">At 8 MHz, one full period lasts 125 nanoseconds.</text>
+    </svg>
+  </div>
+
+  <div class="note">Frequency and period are two views of the same thing: <code>f = 1 / T</code>. An 8&nbsp;MHz crystal swings high-low-high every 125&nbsp;ns. Halve the frequency and the period doubles — that simple inverse is exactly what a prescaler exploits.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>From one crystal to a <em>whole tree</em></h2>
+  <p class="subhead">An 8&nbsp;MHz crystal is slow for a CPU and wrong for half your peripherals. So the chip takes that one source, multiplies it up through a PLL to make SYSCLK, then divides it back down with prescalers to feed each bus at the speed it can tolerate.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 230" role="img" aria-label="Clock tree: HSE source through PLL to SYSCLK, then AHB and APB prescalers">
+      <g font-family="IBM Plex Sans" font-size="11" fill="#1A1814">
+        <!-- HSE -->
+        <rect x="20" y="90" width="90" height="44" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="65" y="112" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600">HSE</text>
+        <text x="65" y="127" text-anchor="middle" font-size="10" fill="#4A4339">8 MHz xtal</text>
+
+        <!-- arrow -->
+        <line x1="110" y1="112" x2="150" y2="112" stroke="#1A1814" stroke-width="1.5"/>
+        <polygon points="150,112 142,108 142,116" fill="#1A1814"/>
+
+        <!-- PLL -->
+        <rect x="150" y="90" width="90" height="44" fill="#E8A47C" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="195" y="112" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600">PLL ×N</text>
+        <text x="195" y="127" text-anchor="middle" font-size="10" fill="#1A1814">multiply</text>
+
+        <!-- arrow -->
+        <line x1="240" y1="112" x2="280" y2="112" stroke="#1A1814" stroke-width="1.5"/>
+        <polygon points="280,112 272,108 272,116" fill="#1A1814"/>
+
+        <!-- SYSCLK -->
+        <rect x="280" y="88" width="100" height="48" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="330" y="110" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#FBF8F2">SYSCLK</text>
+        <text x="330" y="125" text-anchor="middle" font-size="10" fill="#FBF8F2">up to 72 MHz</text>
+
+        <!-- AHB prescaler branch -->
+        <line x1="380" y1="112" x2="420" y2="112" stroke="#1A1814" stroke-width="1.5"/>
+        <polygon points="420,112 412,108 412,116" fill="#1A1814"/>
+        <rect x="420" y="50" width="100" height="44" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="470" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#FBF8F2">AHB ÷</text>
+        <text x="470" y="87" text-anchor="middle" font-size="9.5" fill="#FBF8F2">HCLK → core, DMA</text>
+        <line x1="420" y1="112" x2="420" y2="72" stroke="#1A1814" stroke-width="1.5"/>
+        <line x1="420" y1="72" x2="420" y2="72" stroke="#1A1814" stroke-width="1.5"/>
+
+        <!-- APB prescaler branch (fed from AHB) -->
+        <rect x="420" y="130" width="100" height="44" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.5"/>
+        <text x="470" y="152" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#FBF8F2">APB ÷</text>
+        <text x="470" y="167" text-anchor="middle" font-size="9.5" fill="#FBF8F2">PCLK → UART, SPI</text>
+        <line x1="470" y1="94" x2="470" y2="130" stroke="#1A1814" stroke-width="1.5"/>
+        <polygon points="470,130 466,122 474,122" fill="#1A1814"/>
+      </g>
+      <text x="300" y="210" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">Multiply once, then divide per bus: each peripheral gets a clock it can actually keep up with.</text>
+    </svg>
+  </div>
+
+  <p>Walk it left to right: the 8&nbsp;MHz HSE feeds a PLL that multiplies by N, producing SYSCLK. The AHB prescaler divides SYSCLK into HCLK (the core and DMA bus). The APB prescaler then divides HCLK again into PCLK, which clocks the slower peripherals. Set the dials below and watch the numbers fall out.</p>
+
+  <div class="interactive"
+       x-data="{
+         hse: 8,
+         pllMul: 9,
+         ahbPre: 1,
+         apbPre: 2,
+         sysclk() { return this.hse * this.pllMul; },
+         ahbClk() { return this.sysclk() / this.ahbPre; },
+         apbClk() { return this.ahbClk() / this.apbPre; }
+       }">
+    <div class="interactive-label">STM32F1 clock-tree calculator</div>
+
+    <div class="controls">
+      <span class="readout">HSE source
+        <select x-model.number="hse" style="font-family:inherit;font-size:14px;padding:4px;border:1.5px solid var(--rule);">
+          <option :value="8">8 MHz</option>
+          <option :value="12">12 MHz</option>
+          <option :value="16">16 MHz</option>
+        </select>
+      </span>
+    </div>
+
+    <div class="controls">
+      <span class="readout" style="min-width:170px;">PLL ×<span class="val" x-text="pllMul"></span></span>
+      <input type="range" min="2" max="16" step="1" x-model.number="pllMul">
+    </div>
+
+    <div class="controls">
+      <span class="readout">AHB prescaler ÷
+        <select x-model.number="ahbPre" style="font-family:inherit;font-size:14px;padding:4px;border:1.5px solid var(--rule);">
+          <template x-for="d in [1,2,4,8,16]" :key="d"><option :value="d" x-text="d"></option></template>
+        </select>
+      </span>
+      <span class="readout">APB prescaler ÷
+        <select x-model.number="apbPre" style="font-family:inherit;font-size:14px;padding:4px;border:1.5px solid var(--rule);">
+          <template x-for="d in [1,2,4,8,16]" :key="d"><option :value="d" x-text="d"></option></template>
+        </select>
+      </span>
+      <button class="btn btn-accent" @click="hse=8; pllMul=9; ahbPre=1; apbPre=2">RESET</button>
+    </div>
+
+    <div class="controls" style="gap:24px;">
+      <span class="readout">SYSCLK&nbsp; <span class="val" x-text="sysclk()+' MHz'"></span></span>
+      <span class="readout">AHB (HCLK)&nbsp; <span class="val" x-text="ahbClk()+' MHz'"></span></span>
+      <span class="readout">APB (PCLK)&nbsp; <span class="val" x-text="apbClk()+' MHz'"></span></span>
+    </div>
+
+    <div class="controls">
+      <span class="readout">limit check&nbsp;
+        <span class="val" :style="sysclk()>72 ? 'color:#B8521E' : 'color:#5C8A4E'"
+              x-text="sysclk()>72 ? '⚠ exceeds 72 MHz' : 'OK'"></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="takeaway"><strong>Try this:</strong> the canonical "blue pill" recipe is 8&nbsp;MHz HSE × 9 = 72&nbsp;MHz SYSCLK, AHB&nbsp;÷1, APB&nbsp;÷2 — giving 36&nbsp;MHz on the slow bus. Now push the multiplier to 16 and watch the limit flip to a warning: the silicon physically cannot run that fast, and the chip will lock up if you try.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>A faster clock is not a <em>free lunch</em></h2>
+  <p class="subhead">Cranking SYSCLK higher means more instructions per second — but every edge also charges and discharges the chip's internal capacitance, and dynamic power scales roughly with frequency. Speed costs current, and battery-powered designs feel it directly.</p>
+  <p>The deeper trap is that peripherals derive their timing from the bus clock you handed them. A UART computes its baud divisor from PCLK; an SPI shifts at a fraction of PCLK; a timer counts at HCLK. Change a prescaler and forget to recompute, and the symptoms are maddening:</p>
+  <ul>
+    <li>Garbled serial bytes — the baud rate drifted because PCLK changed under the divisor.</li>
+    <li>A "1&nbsp;second" delay loop that now fires twice as fast or twice as slow.</li>
+    <li>A sensor read at the wrong SPI rate returning plausible-but-wrong values.</li>
+  </ul>
+  <div class="note">This is why clock setup lives in the very first lines of <code>main()</code>, before any peripheral is touched. Pick SYSCLK, set the prescalers, <em>then</em> configure the UART against a clock you know won't move.</div>
+  <div class="takeaway"><strong>The mental model:</strong> the clock tree is a contract. Every peripheral driver was written assuming a specific input frequency. Choose your clocks deliberately, write them down, and let the rest of the firmware compute its timing from those known numbers — never from a guess.</div>
+</section>
+
+{{- end -}}

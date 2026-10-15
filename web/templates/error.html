@@ -1,0 +1,20 @@
+{{- define "error.html" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{ template "head" (printf "%d · Embedded Guide" .Code) }}
+</head>
+<body>
+{{ template "topbar" "" }}
+<div class="container">
+  <div class="error-wrap">
+    <div class="error-code">{{ .Code }}</div>
+    <h1 style="font-size:clamp(24px,6vw,38px);margin-bottom:16px;">This page drifted off the bus</h1>
+    <p class="lede" style="margin:0 auto 24px;">That address doesn't map to anything. Let's get you back to solid ground.</p>
+    <a class="btn btn-accent" href="{{ url "/" }}">← Back to all chapters</a>
+  </div>
+</div>
+{{ template "footer" . }}
+</body>
+</html>
+{{- end -}}

@@ -1,0 +1,32 @@
+{{- /* Shared partials used by every page. Each top-level page template
+       ( home.html / chapter.html / error.html ) assembles these itself, which
+       avoids the block-name collisions you get when sharing one base via
+       {{block}} across many parsed files. */ -}}
+
+{{- define "head" -}}
+<!-- dot (.) is the page title string -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A chapter-wise, animated visual guide to learning embedded systems — from bits to a blinking chip.">
+<meta name="color-scheme" content="light">
+<title>{{ . }}</title>
+<link rel="stylesheet" href="{{ url "/static/css/app.css" }}">
+{{- end -}}
+
+{{- /* topbar: dot (.) is a meta string shown on the right ("" hides it).
+       The progress bar only fills on pages that include app.js progress. */ -}}
+{{- define "topbar" -}}
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url "/" }}">EMBEDDED<span class="dot">.</span>GUIDE</a>
+    {{- if . }}<span class="topbar-meta">{{ . }}</span>{{ end }}
+  </div>
+  <div class="progress-rail"><div class="progress-fill" id="progress-fill"></div></div>
+</div>
+{{- end -}}
+
+{{- define "footer" -}}
+<footer>
+  BITS → BLINKING CHIP · A VISUAL GUIDE TO EMBEDDED SYSTEMS
+</footer>
+{{- end -}}

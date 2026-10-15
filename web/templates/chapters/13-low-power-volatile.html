@@ -1,0 +1,194 @@
+{{- define "chapter-low-power-volatile" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Sleep is a <em>feature</em>, not a failure</h2>
+  <p class="subhead">A microcontroller that runs flat-out all day is a battery's worst enemy. The whole craft of low-power design is knowing how little of the chip you can keep awake — and for how long — while still waking the instant something happens. Each deeper mode trades wake-up speed and retained state for a smaller current draw.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 320" role="img" aria-label="Current consumption stair-step across Run, Sleep, Stop and Standby modes, falling from milliamps to nanoamps">
+      <!-- baseline -->
+      <line x1="60" y1="250" x2="600" y2="250" stroke="#1A1814" stroke-width="1.5"/>
+      <text x="60" y="278" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">deeper sleep  &#8594;  less current, slower wake-up, less stays alive</text>
+
+      <!-- y axis label -->
+      <text x="22" y="150" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" transform="rotate(-90 22 150)" letter-spacing="0.12em">CURRENT DRAW (log)</text>
+
+      <!-- RUN bar -->
+      <rect x="80" y="50" width="110" height="200" fill="#B8521E" stroke="#1A1814" stroke-width="1.4"/>
+      <text x="135" y="42" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">RUN</text>
+      <text x="135" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#fff">~ mA</text>
+      <text x="135" y="92" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">CPU + flash</text>
+      <text x="135" y="105" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">+ everything</text>
+
+      <!-- SLEEP bar -->
+      <rect x="210" y="120" width="110" height="130" fill="#E8A47C" stroke="#1A1814" stroke-width="1.4"/>
+      <text x="265" y="112" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">SLEEP</text>
+      <text x="265" y="148" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">~ 100s &#181;A</text>
+      <text x="265" y="168" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">CPU clock off,</text>
+      <text x="265" y="181" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">peripherals live</text>
+
+      <!-- STOP bar -->
+      <rect x="340" y="185" width="110" height="65" fill="#FFD89C" stroke="#1A1814" stroke-width="1.4"/>
+      <text x="395" y="177" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">STOP</text>
+      <text x="395" y="208" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">~ &#181;A</text>
+      <text x="395" y="226" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">clocks off,</text>
+      <text x="395" y="239" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">RAM retained</text>
+
+      <!-- STANDBY bar -->
+      <rect x="470" y="234" width="110" height="16" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.4"/>
+      <text x="525" y="226" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">STANDBY</text>
+      <text x="525" y="300" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#5C8A4E">~ nA</text>
+      <text x="525" y="216" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">almost all off &#183; RAM lost</text>
+
+      <!-- WFI callout -->
+      <rect x="80" y="284" width="300" height="26" fill="#fff" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="92" y="301" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">WFI &#8212; "Wait For Interrupt" parks the CPU here</text>
+    </svg>
+  </div>
+
+  <p>The trick is that the chip does almost nothing useful in software to go to sleep: it executes a single instruction — <code>WFI</code>, "Wait For Interrupt" — and the core simply stops fetching. It stays stopped, drawing a trickle, until a peripheral or pin raises an interrupt. Then the core wakes exactly where it left off, services the event, and dives back under. A well-written sensor node spends 99.9% of its life in Stop or Standby and is awake only in the milliseconds it takes to read a value and shout it over the radio.</p>
+
+  <div class="takeaway">
+    <strong>The dial you're turning:</strong> deeper modes power down more of the silicon, so current falls from milliamps to nanoamps — but you give up retained state (RAM may be wiped) and pay a longer wake-up latency. Choosing a mode is choosing how patient your application can afford to be.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>What <em>volatile</em> protects you from</h2>
+  <p class="subhead">The compiler's optimiser is brilliant and ruthless: if nothing in your code writes to a variable inside a loop, it will read it once, stash it in a CPU register, and never touch memory again. For an ordinary counter that's a gift. For a hardware register or a flag an interrupt flips behind your back, it's a silent hang.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 280" role="img" aria-label="Without volatile a wait loop is optimised into an infinite hang; with volatile the address is re-read every iteration and the loop exits">
+      <defs>
+        <marker id="lpv-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5C8A4E"/>
+        </marker>
+      </defs>
+
+      <!-- WITHOUT -->
+      <text x="155" y="22" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">WITHOUT volatile &#183; HANGS</text>
+      <rect x="20" y="34" width="270" height="220" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+
+      <rect x="40" y="56" width="100" height="46" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="90" y="74" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">FLAG @ addr</text>
+      <text x="90" y="93" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#1A1814" class="blink">1</text>
+
+      <line x1="140" y1="79" x2="178" y2="79" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="159" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#4A4339">read ONCE</text>
+
+      <rect x="178" y="56" width="92" height="46" fill="#1A1814" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="224" y="74" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#E8A47C">CPU reg</text>
+      <text x="224" y="93" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#FBF8F2">0</text>
+
+      <text x="155" y="128" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#1A1814">while (FLAG == 0) { }</text>
+
+      <line x1="90" y1="106" x2="90" y2="168" stroke="#5C8A4E" stroke-width="1.5" marker-end="url(#lpv-grn)"/>
+      <text x="42" y="140" font-family="IBM Plex Sans" font-size="9.5" fill="#5C8A4E" font-style="italic">ISR sets</text>
+      <text x="42" y="153" font-family="IBM Plex Sans" font-size="9.5" fill="#5C8A4E" font-style="italic">FLAG = 1</text>
+      <text x="90" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#5C8A4E">&#8594; 1</text>
+
+      <line x1="224" y1="106" x2="224" y2="168" stroke="#B8521E" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <text x="224" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#B8521E">still 0</text>
+      <text x="224" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#B8521E" font-weight="600" font-style="italic">never exits</text>
+
+      <text x="155" y="242" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339" font-style="italic">"the loop never writes FLAG, so cache it"</text>
+
+      <!-- WITH -->
+      <text x="465" y="22" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#5C8A4E">WITH volatile &#183; CORRECT</text>
+      <rect x="330" y="34" width="270" height="220" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.5"/>
+
+      <rect x="350" y="56" width="100" height="46" fill="#FBF8F2" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="400" y="74" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">FLAG @ addr</text>
+      <text x="400" y="93" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#1A1814" class="blink">1</text>
+
+      <line x1="450" y1="79" x2="488" y2="79" stroke="#5C8A4E" stroke-width="2" class="pulse"/>
+      <text x="469" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5C8A4E" font-weight="600">read EACH time</text>
+
+      <rect x="488" y="56" width="92" height="46" fill="#1A1814" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="534" y="74" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#E8A47C">CPU reg</text>
+      <text x="534" y="93" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#FBF8F2" class="blink">1</text>
+
+      <text x="465" y="128" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#1A1814">while (*FLAG == 0) { }</text>
+
+      <line x1="400" y1="106" x2="400" y2="168" stroke="#5C8A4E" stroke-width="1.5" marker-end="url(#lpv-grn)"/>
+      <text x="352" y="140" font-family="IBM Plex Sans" font-size="9.5" fill="#5C8A4E" font-style="italic">ISR sets</text>
+      <text x="352" y="153" font-family="IBM Plex Sans" font-size="9.5" fill="#5C8A4E" font-style="italic">FLAG = 1</text>
+      <text x="400" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#5C8A4E">&#8594; 1</text>
+
+      <line x1="534" y1="106" x2="534" y2="168" stroke="#5C8A4E" stroke-width="1.5" marker-end="url(#lpv-grn)"/>
+      <text x="534" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#5C8A4E">&#8594; 1</text>
+      <text x="534" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="#5C8A4E" font-weight="600" font-style="italic">loop exits</text>
+
+      <text x="465" y="242" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339" font-style="italic">"this may change by means I can't see"</text>
+    </svg>
+  </div>
+
+  <p>You declare the keyword right at the pointer to the hardware: <code>volatile uint32_t *FLAG = (volatile uint32_t *)0x40020014;</code>. The <code>volatile</code> qualifier is a promise the compiler must keep — it says <em>this address can change at any moment for reasons outside this function</em>, so emit a fresh load from memory on every access and never fold the reads away. Use it for every memory-mapped register and every variable an ISR shares with your main loop.</p>
+
+  <div class="takeaway">
+    <strong>What volatile is and isn't:</strong> it is a message to the optimiser — re-read from memory, never cache. It does <em>not</em> make access atomic and it does <em>not</em> protect against races; for that you still need to disable interrupts or use proper atomics around multi-step updates.
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>The code that runs <em>before</em> main()</h2>
+  <p class="subhead">You write <code>main()</code> and assume your variables already hold their initial values and your zero-initialised globals really are zero. On bare metal, nothing is free — a small hand-written reset handler has to build that world out of raw flash and blank RAM before your first line ever executes.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 620 250" role="img" aria-label="Startup timeline from reset through setting the stack pointer, copying .data from flash to RAM, zeroing .bss, then calling main">
+      <defs>
+        <marker id="lpv-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1A1814"/>
+        </marker>
+      </defs>
+
+      <!-- timeline spine -->
+      <line x1="40" y1="60" x2="585" y2="60" stroke="#1A1814" stroke-width="1.5" marker-end="url(#lpv-arr)"/>
+      <text x="40" y="34" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#B8521E" letter-spacing="0.14em">POWER-ON / RESET</text>
+
+      <!-- step 1: stack pointer -->
+      <circle cx="70" cy="60" r="6" fill="#B8521E" stroke="#1A1814" stroke-width="1.2"/>
+      <rect x="42" y="80" width="120" height="60" fill="#FFD89C" stroke="#1A1814" stroke-width="1.3"/>
+      <text x="102" y="100" text-anchor="middle" font-family="Fraunces, serif" font-size="12" font-weight="700" fill="#1A1814">set SP</text>
+      <text x="102" y="118" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">stack pointer from</text>
+      <text x="102" y="130" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">vector table[0]</text>
+
+      <!-- step 2: copy .data -->
+      <circle cx="210" cy="60" r="6" fill="#E8A47C" stroke="#1A1814" stroke-width="1.2"/>
+      <rect x="182" y="80" width="130" height="60" fill="#E8A47C" stroke="#1A1814" stroke-width="1.3"/>
+      <text x="247" y="100" text-anchor="middle" font-family="Fraunces, serif" font-size="12" font-weight="700" fill="#1A1814">copy .data</text>
+      <text x="247" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#1A1814">flash &#8594; RAM</text>
+      <text x="247" y="130" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#1A1814">initialised globals</text>
+
+      <!-- step 3: zero .bss -->
+      <circle cx="360" cy="60" r="6" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.2"/>
+      <rect x="332" y="80" width="130" height="60" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.3"/>
+      <text x="397" y="100" text-anchor="middle" font-family="Fraunces, serif" font-size="12" font-weight="700" fill="#FBF8F2">zero .bss</text>
+      <text x="397" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#FBF8F2">RAM &#8594; 0x00</text>
+      <text x="397" y="130" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#FBF8F2">uninit / =0 globals</text>
+
+      <!-- step 4: main -->
+      <circle cx="510" cy="60" r="6" fill="#1A1814" stroke="#1A1814" stroke-width="1.2"/>
+      <rect x="482" y="80" width="118" height="60" fill="#1A1814" stroke="#1A1814" stroke-width="1.3"/>
+      <text x="541" y="104" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="700" fill="#FFD89C">main()</text>
+      <text x="541" y="124" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">your program begins</text>
+
+      <!-- trailing loop note -->
+      <rect x="182" y="172" width="418" height="48" fill="#fff" stroke="#1A1814" stroke-width="1.2"/>
+      <text x="200" y="192" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">int main(void) { setup(); while (1) { /* forever */ } }</text>
+      <text x="200" y="210" font-family="IBM Plex Sans" font-size="10" fill="#4A4339" font-style="italic">main() must never return &#8212; there is no OS to return to.</text>
+    </svg>
+  </div>
+
+  <p>This startup code — the C runtime, often called <code>crt0</code> or the reset handler — is what makes C feel like C on bare hardware. It loads the stack pointer from the top of the vector table, copies the <code>.data</code> section (your globals with explicit initial values) out of flash into RAM, writes zeros across the <code>.bss</code> section (everything declared but uninitialised, or set to zero), and only then branches to <code>main()</code>. Skip those steps and your "global = 42" would be garbage, and your zeroed array would be full of whatever the RAM held at power-on.</p>
+  <p>And notice the <code>while (1)</code> that wraps every embedded <code>main()</code>. On a desktop, returning from main hands control back to the operating system. Here there is no operating system — return from main and the CPU falls off the end of the world into undefined behaviour. So you loop forever, doing your work or sleeping on <code>WFI</code> between interrupts.</p>
+
+  <div class="takeaway">
+    <strong>The whole journey, in one breath:</strong> we started with bits — patterns of voltage that mean numbers. We watched a single bit flip a register and a register switch a real pin. We saw the chip boot, copy itself into being, and call <code>main()</code>; talk to the world over UART, SPI and I&#178;C; respond in microseconds to interrupts; and finally sleep at nanoamps, waking only when needed. "Set bit 5 of the GPIO output register to turn on the LED" is no longer a spell — it's a sentence you can read down to the silicon. That blinking chip on your bench is just bits, kept honest by <code>volatile</code>, carried by a runtime you now understand. Go build something.
+  </div>
+</section>
+
+{{- end -}}
