@@ -1,0 +1,118 @@
+{{- define "chapter-embedded-c" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Choose the width before the operation</h2>
+  <p class="subhead">Bare-metal C makes storage visible. A hardware register has a documented width; your variables and masks should match it. Unlike many application languages, C does not give every integer the same range, and signed overflow is undefined behavior.</p>
+  <p>Include <code>&lt;stdint.h&gt;</code> for <code>uint8_t</code>, <code>uint16_t</code>, and <code>uint32_t</code>: unsigned integers of exactly 8, 16, and 32 bits, where the implementation provides them. Plain <code>int</code> is not necessarily 32 bits. Converting an integer to <code>uint8_t</code> wraps modulo 256; arithmetic on small integer types usually first promotes them to <code>int</code>. Distinguish the intermediate calculation from the value finally stored.</p>
+  <pre><code class="language-c">#include &lt;stdint.h&gt;
+
+uint8_t count = 255;
+count = (uint8_t)(count + 1);  /* stores 0 */
+unsigned n = 31;               /* require 0 &lt;= n &lt; 32 */
+uint32_t mask = UINT32_C(1) &lt;&lt; n;</code></pre>
+  <p>Use an unsigned mask, not a signed <code>1 &lt;&lt; 31</code>. Never shift a 32-bit operand by 32 or more, and never use a negative shift count. The explorer keeps the count in range and displays JavaScript's bitwise result as unsigned using <code>&gt;&gt;&gt; 0</code>; JavaScript's shift-count wrapping is not a C rule.</p>
+  <div class="interactive" x-data="{
+    bit: 5, answer: '', checked: false,
+    mask() { return (1 &lt;&lt; this.bit) &gt;&gt;&gt; 0; },
+    hex() { return '0x' + this.mask().toString(16).toUpperCase().padStart(8, '0'); },
+    check() {
+      if (!this.answer) return;
+      this.checked = true;
+      this.$dispatch('guide:feedback', { type: this.answer === 'invalid' ? 'correct' : 'incorrect' });
+    }
+  }">
+    <div class="interactive-label">Unsigned mask explorer</div>
+    <label for="embedded-c-bit">Bit position n (0–31)</label>
+    <select id="embedded-c-bit" x-model.number="bit">
+      <template x-for="position in 32" :key="position">
+        <option :value="position - 1" x-text="position - 1"></option>
+      </template>
+    </select>
+    <p role="status">Mask: <output for="embedded-c-bit" x-text="hex()">0x00000020</output> · decimal <span x-text="mask()">32</span></p>
+    <p id="embedded-c-check-prompt">Self-check: is shifting a 32-bit operand by 32 a valid way to get zero in C?</p>
+    <label for="embedded-c-answer">Your answer</label>
+    <select id="embedded-c-answer" aria-describedby="embedded-c-check-prompt" x-model="answer" @change="checked = false">
+      <option value="">Choose an answer</option>
+      <option value="zero">Yes, the result is zero</option>
+      <option value="invalid">No, the shift count is invalid</option>
+    </select>
+    <button type="button" class="btn" :disabled="!answer" @click="check()">Check answer</button>
+    <p role="status" x-text="checked ? (answer === 'invalid' ? 'Correct. A 32-bit operand requires a shift count from 0 to 31; shifting by 32 has undefined behavior.' : 'Incorrect. C does not guarantee zero: shifting by the operand width has undefined behavior. Keep n below 32.') : ''"></p>
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>An address is not the value stored there</h2>
+  <p class="subhead">A pointer identifies a location and a pointed-to type. Dereferencing it accesses the object at that location. For ordinary RAM, <code>&amp;value</code> obtains an address; <code>*pointer</code> accesses its contents. Pointer arithmetic advances in objects, not necessarily bytes.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 180" role="img" aria-labelledby="embedded-c-pointer-title embedded-c-pointer-desc" style="width:100%;height:auto;display:block;">
+      <title id="embedded-c-pointer-title">Pointer, address, and register value</title>
+      <desc id="embedded-c-pointer-desc">The pointer holds address 0x40000000. Dereferencing it reads a device register whose example value is 0x00000020. The address and value are distinct.</desc>
+      <g font-family="IBM Plex Mono, monospace" font-size="15" fill="var(--ink)">
+        <rect x="16" y="40" width="235" height="80" rx="4" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="32" y="69">pointer: control</text>
+        <text x="32" y="99">0x40000000</text>
+        <path d="M260 80 H365 M354 72 L365 80 L354 88" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <rect x="380" y="40" width="244" height="80" rx="4" fill="var(--highlight)" stroke="var(--rule)"/>
+        <text x="396" y="69">*control: value</text>
+        <text x="396" y="99">0x00000020</text>
+      </g>
+      <text x="320" y="157" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" fill="var(--ink-soft)">Illustrative MMIO address — not a portable device definition</text>
+    </svg>
+  </div>
+  <pre><code class="language-c">/* Illustration only: use your device's vendor header. */
+volatile uint32_t * const control =
+    (volatile uint32_t *)(uintptr_t)UINT32_C(0x40000000);
+uint32_t snapshot = *control;</code></pre>
+  <p>A memory map tells you which addresses select RAM, flash, or memory-mapped I/O (MMIO). The example address is device-specific fiction, not a safe register to probe. Integer-to-pointer conversion depends on the target implementation. A valid access also requires the correct alignment, register width, peripheral clock, and permissions. A random dereference may fault or change hardware state.</p>
+  <p>Here <code>volatile</code> qualifies the register being accessed; <code>const</code> prevents reassigning the pointer itself. Volatile accesses must follow the implementation's hardware-access rules rather than being optimized away as ordinary unused reads. They do not automatically provide CPU memory barriers or cache coherence. Prefer the vendor's typed register definitions and documented access sequence.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Update a field, not its neighbors</h2>
+  <p class="subhead">For an ordinary read/write register, clear the target field and insert the new value. OR alone cannot replace a field: a previous one bit would survive when the new value needs zero.</p>
+  <pre><code class="language-c">/* Only for an ordinary R/W register; mode is 0..3. */
+uint32_t field_mask = UINT32_C(3) &lt;&lt; 4;
+uint32_t old = *control;
+uint32_t mode = 2;
+*control = (old &amp; ~field_mask) | ((mode &lt;&lt; 4) &amp; field_mask);</code></pre>
+  <p>The mask covers bits 5:4. Inverting it keeps unrelated bits from the snapshot, while the final AND confines the inserted value. This is a <strong>read-modify-write</strong>, not one indivisible action. If an interrupt, another core, or hardware changes the register between the read and write, the old snapshot can overwrite that change.</p>
+  <p>Read the register's access description before applying this idiom. Write-one-to-clear (W1C) status bits clear when written as one: reading status and writing it back can accidentally acknowledge every pending event. Clear only the intended documented W1C bits by directly writing their mask. Read-only, read-to-clear, mixed-access, and reserved bits require their own rules. Use dedicated SET/CLEAR or set/reset registers when available; these avoid a software read-modify-write for supported operations. They still require the device manual's prescribed values and ordering.</p>
+  <div class="takeaway"><strong>First classify the register.</strong> A mask preserves neighbors only when the register semantics and concurrency assumptions make that read-modify-write safe. C bit-field declarations are not a portable substitute for explicit hardware masks.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Layout and sharing need separate contracts</h2>
+  <p class="subhead">Arrays store elements contiguously, with a stride of <code>sizeof element</code>. Structures preserve member order but can include alignment padding between members and at the end. They are not packed by default.</p>
+  <pre><code class="language-c">struct Sample {
+    uint8_t tag;
+    uint32_t ticks;
+};
+struct Sample samples[2];
+/* sizeof samples == 2 * sizeof(struct Sample) */</code></pre>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 165" role="img" aria-labelledby="embedded-c-layout-title embedded-c-layout-desc" style="width:100%;height:auto;display:block;">
+      <title id="embedded-c-layout-title">Example structure padding and byte order</title>
+      <desc id="embedded-c-layout-desc">On one common ABI, tag occupies byte zero, bytes one through three are padding, and ticks occupies bytes four through seven. The little-endian value 0x12345678 is stored as 78, 56, 34, 12. This layout is not universal.</desc>
+      <g font-family="IBM Plex Mono, monospace" font-size="14" text-anchor="middle" fill="var(--ink)">
+        <path d="M16 50 H624 V100 H16 Z" fill="var(--paper)" stroke="var(--rule)"/>
+        <rect x="16" y="50" width="76" height="50" fill="var(--highlight)" stroke="var(--rule)"/>
+        <rect x="92" y="50" width="228" height="50" fill="var(--surface)" stroke="var(--rule)"/>
+        <path d="M396 50 V100 M472 50 V100 M548 50 V100" stroke="var(--rule)"/>
+        <text x="54" y="32">0</text><text x="206" y="32">1–3</text>
+        <text x="358" y="32">4</text><text x="434" y="32">5</text><text x="510" y="32">6</text><text x="586" y="32">7</text>
+        <text x="54" y="81">tag</text><text x="206" y="81">padding</text>
+        <text x="358" y="81">78</text><text x="434" y="81">56</text><text x="510" y="81">34</text><text x="586" y="81">12</text>
+      </g>
+      <text x="320" y="137" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" fill="var(--ink-soft)">Example ABI, little-endian ticks = 0x12345678; verify your target</text>
+    </svg>
+  </div>
+  <p>Use <code>sizeof</code> and <code>offsetof</code> (from <code>&lt;stddef.h&gt;</code>) to check actual layout. Endianness determines byte order within multi-byte integers, not member order. Do not transmit or persist raw structs as a portable format; serialize fields explicitly. Packing extensions can introduce unaligned accesses and are not a universal fix.</p>
+  <p>Sharing with an ISR adds another contract. A <code>volatile</code> flag can support a target-documented polling pattern, but does not guarantee atomic access, prevent lost events, or publish accompanying nonvolatile data safely. Even <code>flag++</code> is a read-modify-write. C11 <code>_Atomic</code> provides atomic operations and memory-order tools, but ISR use requires toolchain support and operations verified lock-free and interrupt-safe; a hidden library lock can deadlock. Otherwise use a short platform-approved critical section, restoring the previous interrupt state. A boolean also merges repeated events: use a protected counter or queue when every event matters.</p>
+</section>
+
+{{- end -}}

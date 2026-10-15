@@ -69,8 +69,10 @@ document.documentElement.classList.add('js');
       {{- $current := .CurrentSlug }}
       {{- $counts := .SectionCounts }}
       {{- range .Parts }}
-      <div class="sidebar-part">
-        <h2>{{ .Name }}</h2>
+      {{- $expanded := false }}
+      {{- range .Chapters }}{{ if eq $current .Slug }}{{ $expanded = true }}{{ end }}{{ end }}
+      <details class="sidebar-part"{{ if $expanded }} open{{ end }}>
+        <summary><span>{{ .Name }}</span><span class="category-meta">{{ len .Chapters }} <span class="category-chevron" aria-hidden="true">+</span></span></summary>
         <ul>
           {{- range .Chapters }}
           <li><a class="sidebar-link" href="{{ url (printf "/chapter/%s/" .Slug) }}"{{ if eq $current .Slug }} aria-current="page"{{ end }} data-chapter-link="{{ .Slug }}" data-sections="{{ index $counts .Slug }}">
@@ -80,7 +82,7 @@ document.documentElement.classList.add('js');
           </a></li>
           {{- end }}
         </ul>
-      </div>
+      </details>
       {{- end }}
       <p class="sidebar-note">Go in order, or follow your curiosity.</p>
     </nav>

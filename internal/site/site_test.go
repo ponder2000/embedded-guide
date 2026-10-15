@@ -157,6 +157,14 @@ func TestGuideLayout(t *testing.T) {
 		}
 		for name, active := range pages {
 			body := string(files[name])
+			openCategories := strings.Count(body, `class="sidebar-part" open`)
+			wantOpen := 0
+			if active != "" {
+				wantOpen = 1
+			}
+			if openCategories != wantOpen {
+				t.Errorf("%s has %d expanded categories; want %d", name, openCategories, wantOpen)
+			}
 			for _, marker := range []string{`class="guide-layout"`, `class="chapter-menu" open`, `aria-label="Chapters"`, `id="main-content"`, `href="#main-content"`} {
 				if !strings.Contains(body, marker) {
 					t.Errorf("%s missing layout element %s", name, marker)
@@ -188,6 +196,22 @@ func TestGuideLayout(t *testing.T) {
 			if !strings.Contains(body, `data-simulation=`) || !strings.Contains(body, `/static/js/simulations.js`) {
 				t.Errorf("%s missing simulation player", slug)
 			}
+		}
+	}
+}
+
+func TestBeginnerLessonsHaveCompleteSections(t *testing.T) {
+	files, err := site.Generate("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, slug := range []string{"electronics-essentials", "embedded-c", "mcu-datasheet", "bare-metal-firmware", "build-flash-debug", "first-project"} {
+		body := string(files["chapter/"+slug+"/index.html"])
+		if count := strings.Count(body, `class="section-number"`); count != 4 {
+			t.Errorf("%s has %d sections; want 4", slug, count)
+		}
+		if !strings.Contains(body, `role="img"`) || !strings.Contains(body, `aria-label=`) {
+			t.Errorf("%s is missing an accessible visual explanation", slug)
 		}
 	}
 }

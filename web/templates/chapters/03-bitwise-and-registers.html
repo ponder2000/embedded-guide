@@ -6,11 +6,12 @@
   <p class="subhead">A hardware register is a row of bits living at a fixed memory address. Each bit is a tiny switch wired to something real — a pin, a mode, an enable. To control the chip, you flip the right switches without disturbing the others.</p>
   <p>Three operations do almost everything. Each uses a <em>mask</em> — a number with 1s in the positions you care about — and a bitwise operator:</p>
   <ul>
-    <li><strong>Set</strong> a bit: <code>reg |= (1 &lt;&lt; n)</code> — OR forces the bit to 1.</li>
-    <li><strong>Clear</strong> a bit: <code>reg &amp;= ~(1 &lt;&lt; n)</code> — AND with an inverted mask forces it to 0.</li>
-    <li><strong>Toggle</strong> a bit: <code>reg ^= (1 &lt;&lt; n)</code> — XOR flips it.</li>
+    <li><strong>Set</strong> a bit: <code>reg |= mask</code> — OR forces the bit to 1.</li>
+    <li><strong>Clear</strong> a bit: <code>reg &amp;= ~mask</code> — AND with an inverted mask forces it to 0.</li>
+    <li><strong>Toggle</strong> a bit: <code>reg ^= mask</code> — XOR flips it.</li>
   </ul>
-  <div class="note">Why masks instead of just assigning <code>reg = 0x20</code>? Because a direct write clobbers all 32 bits. Read-modify-write with a mask touches only what you mean to.</div>
+  <p>For a 32-bit mask in C, include <code>&lt;stdint.h&gt;</code> and use <code>uint32_t mask = UINT32_C(1) &lt;&lt; n;</code>, with <code>0 ≤ n &lt; 32</code>. A signed <code>1 &lt;&lt; 31</code> is not a portable way to set bit 31.</p>
+  <div class="note">These operations model an ordinary read/write register. Masked read-modify-write preserves unrelated bits only when register semantics and concurrency permit it. Write-one-to-clear flags need a direct mask write; write-only, read-clear, and mixed-access registers need their documented access sequence.</div>
 </section>
 
 <section>
@@ -49,9 +50,9 @@
           <template x-for="n in 32" :key="n"><option :value="n-1" x-text="n-1"></option></template>
         </select>
       </span>
-      <button class="btn" @click="setBit()">SET — reg |= (1&lt;&lt;n)</button>
-      <button class="btn" @click="clearBit()">CLEAR — reg &amp;= ~(1&lt;&lt;n)</button>
-      <button class="btn" @click="togBit()">TOGGLE — reg ^= (1&lt;&lt;n)</button>
+      <button class="btn" @click="setBit()">SET — reg |= mask</button>
+      <button class="btn" @click="clearBit()">CLEAR — reg &amp;= ~mask</button>
+      <button class="btn" @click="togBit()">TOGGLE — reg ^= mask</button>
       <button class="btn btn-accent" @click="reg = 0">RESET</button>
     </div>
 
@@ -81,10 +82,10 @@
         <rect x="470" y="40" width="90" height="40" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/><text x="515" y="65" text-anchor="middle" fill="#FBF8F2">FLAG</text>
       </g>
       <text x="300" y="110" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" fill="#4A4339">One 32-bit word, carved into named fields — each owned by a different feature.</text>
-      <text x="300" y="130" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#B8521E">GPIOA-&gt;MODER |= (1 &lt;&lt; ENABLE_Pos);</text>
+      <text x="300" y="130" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#B8521E">CONFIG |= (UINT32_C(1) &lt;&lt; ENABLE_Pos);</text>
     </svg>
   </div>
-  <div class="takeaway"><strong>The habit:</strong> never assign a whole register when you mean one field. Reach for <code>|=</code>, <code>&amp;= ~</code>, and <code>^=</code> with a named mask, and the other features sharing that register keep working.</div>
+  <div class="takeaway"><strong>The habit:</strong> first identify the register's access rules. Use masked updates for ordinary configuration fields, direct mask writes for documented W1C flags, and dedicated set/reset registers such as GPIO BSRR where available. A software read-modify-write can lose concurrent updates.</div>
 </section>
 
 {{- end -}}

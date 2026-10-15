@@ -1,0 +1,78 @@
+{{- define "chapter-first-project" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>One board, <em>one visible success</em></h2>
+  <p class="subhead">Build a heartbeat on a <strong>NUCLEO-F401RE</strong> using STM32CubeIDE and the generated STM32 HAL project. The first goal is modest: make the onboard user LED change predictably, then prove that your own firmware survives a reset.</p>
+  <p>You need the board, a data-capable USB cable matching its onboard ST-LINK connector, and the vendor-supported development tools. Leave breadboards and external circuits disconnected. Consult ST's <strong>UM1724</strong> Nucleo-64 manual and the schematic for your board revision, identified by its markings. On NUCLEO-F401RE, user LED <strong>LD2 uses PA5</strong> and user button <strong>B1 uses PC13</strong>; verify those connections rather than transferring assumptions from another Nucleo.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 200" role="img" aria-label="First-project connections: USB to onboard ST-LINK, internal SWD to target, PA5 to LD2, and B1 to PC13; no external circuit" style="width:100%;height:auto;">
+      <rect x="15" y="25" width="610" height="150" fill="var(--paper)" stroke="var(--ink)"/>
+      <g fill="var(--ink)" font-size="15" text-anchor="middle">
+        <text x="115" y="68">ST-LINK USB</text><text x="115" y="93">from computer</text>
+        <text x="320" y="68">STM32F401RE</text><text x="320" y="93">runs your code</text>
+        <text x="535" y="68">LD2 ← PA5</text><text x="535" y="93">B1 → PC13</text>
+      </g>
+      <path d="M200 78h40m165 0h40" stroke="var(--accent)" stroke-width="2"/>
+      <text x="320" y="148" text-anchor="middle" fill="var(--accent)" font-size="15">Everything needed for first success is already onboard.</text>
+    </svg>
+  </div>
+  <p>Connect only the ST-LINK USB cable using the manual's normal USB-power configuration. Identify the power indicator separately from LD2: a steady power light proves power, not that your application works.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Generate the foundation, <em>then blink</em></h2>
+  <p>In CubeIDE, create an STM32 project through the board selector and choose NUCLEO-F401RE. Accept board initialization where offered, install the required STM32F4 firmware package, and inspect the generated configuration. Menu wording varies by version. Confirm PA5 is a push-pull GPIO output and that the generated system-clock configuration is valid; do not copy clock settings from an unrelated board.</p>
+  <p>Generate code and inspect <code>main.h</code> for the LED's names. These snippets assume <code>LD2_GPIO_Port</code> and <code>LD2_Pin</code>; substitute the actual generated labels if different. Keep edits inside generator-preserved USER CODE regions. The following is <strong>only the body of the generated infinite loop</strong>, reached after <code>HAL_Init()</code>, clock setup, and <code>MX_GPIO_Init()</code>:</p>
+  <pre><code>HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+HAL_Delay(500);</code></pre>
+  <p>Build, launch the project's ST-LINK debug configuration, and resume after any initial breakpoint. LD2 should change state every half-second: one complete on/off cycle takes approximately one second. This blocking delay is acceptable for proving the board and toolchain, but the loop cannot service another task during the wait.</p>
+  <div class="takeaway"><strong>Checkpoint:</strong> count about ten complete cycles in ten seconds. Change the delay to 1000 milliseconds, rebuild, and reprogram. The full cycle should now take about two seconds. That deliberate difference proves the board received your new build.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>A heartbeat <em>without waiting</em></h2>
+  <p>Replace the blocking loop body with a tiny time-driven state machine. First put this declaration in the preserved user-code region <strong>after generated initialization, before the infinite loop</strong>:</p>
+  <pre><code>uint32_t last_toggle = HAL_GetTick();</code></pre>
+  <p>Then use this loop-body snippet instead of the earlier toggle-and-delay pair:</p>
+  <pre><code>uint32_t now = HAL_GetTick();
+if ((uint32_t)(now - last_toggle) &gt;= 500U) {
+    last_toggle = now;
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+}
+/* Other short, nonblocking work can run here. */</code></pre>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 175" role="img" aria-label="Nonblocking heartbeat repeatedly checks elapsed time, toggles after at least 500 milliseconds, and otherwise returns immediately to other work" style="width:100%;height:auto;">
+      <g fill="var(--paper)" stroke="var(--ink)">
+        <rect x="10" y="35" width="170" height="60"/><rect x="235" y="35" width="170" height="60"/><rect x="460" y="35" width="170" height="60"/>
+        <path d="M180 65h55m170 0h55M545 95v40H95V95" fill="none"/>
+      </g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="14">
+        <text x="95" y="61">Read tick</text><text x="95" y="81">compute elapsed</text>
+        <text x="320" y="61">If ≥ 500 ms</text><text x="320" y="81">toggle + remember</text>
+        <text x="545" y="61">Other short work</text><text x="545" y="81">no waiting</text>
+      </g>
+      <text x="320" y="158" text-anchor="middle" fill="var(--accent)" font-size="14">Repeat quickly; an LED transition happens only when due.</text>
+    </svg>
+  </div>
+  <p>The LED's current output is its state. With the default HAL millisecond timebase, unsigned subtraction handles the 32-bit tick's wraparound, provided checks remain frequent and delays do not span a full counter cycle. <code>&gt;=</code> avoids missing a deadline when the loop skips the exact millisecond. Setting the timestamp to <code>now</code> avoids catch-up bursts but allows drift; this is a heartbeat, not a precision scheduler.</p>
+  <p>Optional extension: read B1 with <code>HAL_GPIO_ReadPin()</code> and choose a faster interval while held. Configure PC13 as an input, inspect its schematic and pull configuration, and explicitly define a verified <code>BUTTON_PRESSED_LEVEL</code>. Do not assume pressed means low. Debounce before making a single press toggle a mode.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Make the result <em>repeatable</em></h2>
+  <ul>
+    <li>Build with no errors; confirm the selected board and programmed ELF.</li>
+    <li>Observe ten heartbeat cycles, then verify your deliberate timing change.</li>
+    <li>Resume execution, disconnect the debug session, and press reset. Confirm blinking restarts.</li>
+    <li>Reconnect USB with the normal power configuration; confirm the stored program runs again.</li>
+  </ul>
+  <p>No blink? Check the data cable, power jumpers, ST-LINK detection, and programming result first. Confirm execution is not halted at a breakpoint. Inspect clock initialization, GPIO peripheral-clock enable, PA5 output mode, pin labels, and LED active level. If delays never finish, check that the HAL tick advances. Debug reset behavior can differ from a physical reset.</p>
+  <p>A multimeter can check low-voltage board power or a slowly held GPIO level against board GND; avoid shorts and never probe mains. UART logging is optional, not required evidence of success. See <a href="{{ url "/chapter/build-flash-debug/" }}">build, flash, and debug</a> if the programming path is unclear.</p>
+  <div class="takeaway"><strong>Self-check:</strong> why does a 500-millisecond toggle produce a one-second cycle? What work can now run between transitions? Explain why power, programming, and execution are three separate checks.</div>
+</section>
+
+{{- end -}}

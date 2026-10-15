@@ -8,6 +8,8 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.__interfaceTones = 0;
+      window.__feedbackTypes = [];
+      document.addEventListener("guide:feedback", event => window.__feedbackTypes.push(event.detail?.type));
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (Audio) {
         const original = Audio.prototype.createOscillator;
@@ -19,12 +21,16 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     const ready = () => page.waitForSelector('html[data-storage-ready="true"]');
     const saved = () => page.waitForSelector('html[data-saving="false"]');
     await page.goto(base + "/"); await ready();
-    assert.equal(await page.locator(".index-chapter").count(), 13);
+    const chapterTotal = await page.locator(".index-chapter").count();
+    assert.ok(chapterTotal >= 19, "Beginner and practical firmware lessons must appear on the learning map");
+    assert.equal(await page.locator(".sidebar-part[open]").count(), 0, "Overview categories should start collapsed");
     assert.ok((await page.locator(".compact-map").boundingBox()).height < 300, "Mobile learning map should stay compact");
     assert.equal(await page.locator(".guide-sidebar").evaluate(el => el.inert), true);
     await page.locator(".drawer-trigger").click();
     assert.equal(await page.locator("#guide-sidebar").getAttribute("aria-modal"), "true");
     assert.equal(await page.locator("#main-content").evaluate(el => el.inert), true);
+    await page.locator(".sidebar-part > summary").first().click();
+    assert.equal(await page.locator(".sidebar-part").first().getAttribute("open"), "");
     await page.keyboard.press("Shift+Tab");
     assert.equal(await page.locator("#guide-sidebar").evaluate(el => el.contains(document.activeElement)), true);
     if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/mobile-drawer.png` });
@@ -44,6 +50,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     assert.match(await page.locator(".answer-feedback").textContent(), /Exactly/);
     assert.ok(await page.evaluate(() => window.__interfaceTones > 0), "Opted-in feedback should synthesize sound");
     await page.goto(base + "/chapter/uart/"); await ready();
+    assert.equal(await page.locator(".sidebar-part[open]").count(), 1, "Only the active chapter category should start open");
     assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
     const toggles = page.locator(".section-read-toggle");
     for (let i = 0; i < await toggles.count(); i++) {
@@ -65,7 +72,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     assert.match(await page.locator(".simulation-readout").textContent(), /^Data bit 0/);
     await page.goto(base + "/"); await ready();
     assert.equal(await page.locator('.index-chapter[data-chapter-link="uart"]').getAttribute("data-read-state"), "read");
-    assert.match(await page.locator(".overall-progress").textContent(), /1 \/ 13/);
+    assert.ok((await page.locator(".overall-progress").textContent()).startsWith(`1 / ${chapterTotal}`));
     await page.locator(".preferences summary").click();
     assert.equal(await page.isChecked("#sound-choice"), true);
     await page.uncheck("#tracking-choice");
@@ -83,7 +90,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     await page.click("#reset-progress");
     await page.waitForTimeout(100);
     await page.goto(base + "/"); await ready();
-    assert.match(await page.locator(".overall-progress").textContent(), /^0 \/ 13/);
+    assert.ok((await page.locator(".overall-progress").textContent()).startsWith(`0 / ${chapterTotal}`));
     assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
     await page.goto(base + "/chapter/uart/"); await ready();
     await page.locator(".section-read-toggle").first().click(); await saved();
@@ -112,6 +119,32 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
           await page.locator(".sim-step").click();
           assert.ok((await page.locator(".simulation-readout").textContent()).length > 0);
         }
+        if (width === 360 && slug === "electronics-essentials") {
+          assert.match(await page.locator("#electronics-estimate").textContent(), /3\.94 mA/);
+          await page.fill("#electronics-resistance", "660");
+          assert.match(await page.locator("#electronics-estimate").textContent(), /1\.97 mA/);
+          await page.fill("#electronics-drop", "4");
+          assert.match(await page.locator("#electronics-estimate").textContent(), /No forward-current estimate/);
+          await page.fill("#electronics-drop", "2");
+          await page.selectOption("#electronics-prediction", "half");
+          await page.getByRole("button", { name: "Check prediction", exact: true }).click();
+          assert.match(await page.locator('.interactive p[role="status"]').last().textContent(), /Correct/);
+          assert.ok((await page.evaluate(() => window.__feedbackTypes)).includes("correct"));
+        }
+        if (width === 360 && slug === "embedded-c") {
+          await page.selectOption("#embedded-c-bit", "31");
+          assert.equal(await page.locator("output").textContent(), "0x80000000");
+          await page.selectOption("#embedded-c-answer", "invalid");
+          await page.getByRole("button", { name: "Check answer", exact: true }).click();
+          assert.ok((await page.evaluate(() => window.__feedbackTypes)).includes("correct"));
+        }
+        if (width === 360 && slug === "bare-metal-firmware") {
+          assert.equal(await page.locator("pre").count(), 3, "C, Rust, and Zig examples must all be present");
+          await page.getByRole("button", { name: "Next step", exact: true }).click();
+          assert.match(await page.locator("#bare-metal-step").textContent(), /Step 2/);
+          await page.getByRole("button", { name: "Restart loop", exact: true }).click();
+          assert.match(await page.locator("#bare-metal-step").textContent(), /Step 1/);
+        }
       }
     }
     assert.deepEqual(errors, [], "No browser/Alpine errors expected");
@@ -138,7 +171,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     await noStorage.close();
     const noJS = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     const staticPage = await noJS.newPage(); await staticPage.goto(base + "/chapter/uart/");
-    assert.equal(await staticPage.locator(".sidebar-link").count(), 13);
+    assert.equal(await staticPage.locator(".sidebar-link").count(), chapterTotal);
     assert.equal(await staticPage.locator("article section").first().evaluate(el => getComputedStyle(el).opacity), "1");
     await noJS.close();
     console.log("Browser checks passed: drawer, themes, IndexedDB, progress, sound preference, feedback, playback, all chapters at 360/768/1440px.");

@@ -1,0 +1,87 @@
+{{- define "chapter-bare-metal-firmware" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Firmware does not require an operating system</h2>
+  <p class="subhead">Bare-metal firmware runs directly on the microcontroller, without an operating-system scheduler. Libraries, vendor drivers, startup code, and language runtimes can still be part of that firmware.</p>
+  <p><strong>Learning objectives:</strong> trace reset to application code, recognize equivalent register writes in C, Rust, and Zig, and distinguish an event loop from interrupt execution.</p>
+  <p>For a normal Cortex-M reset, hardware obtains the <strong>initial main stack pointer (MSP)</strong> from the first vector-table word and the <strong>reset-handler address</strong> from the second. The device's boot selection determines which memory supplies those vectors. A correctly formed handler address indicates Thumb execution. Hardware does not automatically initialize every language variable or call <code>main</code>.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 230" role="img" aria-label="Reset reads initial MSP and reset vector, enters startup, initializes data and bss, and enters the application; SystemInit order depends on runtime" style="width:100%;height:auto;">
+      <g fill="var(--surface)" stroke="var(--rule)">
+        <rect x="10" y="35" width="145" height="100"/><rect x="180" y="35" width="145" height="100"/><rect x="350" y="35" width="145" height="100"/><rect x="520" y="35" width="150" height="100"/>
+      </g>
+      <path d="M155 85h25m145 0h25m145 0h25" stroke="var(--accent)" stroke-width="2"/>
+      <g text-anchor="middle" fill="var(--ink)" font-size="14">
+        <text x="82" y="71">Reset hardware</text><text x="82" y="98">MSP + vector</text>
+        <text x="252" y="71">Reset handler</text><text x="252" y="98">startup code</text>
+        <text x="422" y="71">Runtime setup</text><text x="422" y="98">.data / .bss</text>
+        <text x="595" y="71">Application</text><text x="595" y="98">main / entry</text>
+      </g>
+      <text x="340" y="174" text-anchor="middle" fill="var(--ink-soft)" font-size="14">SystemInit and other hooks: inspect your actual startup implementation.</text>
+      <text x="340" y="202" text-anchor="middle" fill="var(--accent)" font-size="14">No OS is needed to reach your application.</text>
+    </svg>
+  </div>
+  <p>Startup normally copies initialized <code>.data</code> from its flash load image into SRAM and zeros <code>.bss</code>. It may call <code>SystemInit</code>, initialize language support, and then enter the application. Hook names and ordering vary: some vendor startup calls <code>SystemInit</code> before copying data. Never assume globals are ready inside an early hook. Rust runtime crates and Zig platform startup can provide equivalent setup; neither language removes the need for it.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>See what belongs in the image</h2>
+  <p>A firmware build needs executable code, a vector table, and a memory layout agreed upon by startup and the linker. A <strong>linker script</strong>, or equivalent linker configuration, places sections in the device's flash and SRAM. The ELF can retain symbols for debugging; the programmed image must contain the bytes needed at boot.</p>
+  <p>Instructions and constant data commonly stay in flash. Initialized writable variables have <strong>two locations</strong>: initial bytes stored in flash and a runtime address in SRAM. Zero-initialized storage needs SRAM space but normally no matching block of zero bytes in flash. The stack needs reserved, correctly aligned RAM. A heap is optional: using static storage and stack variables requires no dynamic allocator. Allocation needs explicit allocator/runtime configuration and enough memory.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 225" role="img" aria-label="Flash contains vectors, code, constants, and initial data bytes; startup copies data to SRAM and clears bss while reserving stack space; heap is optional" style="width:100%;height:auto;">
+      <g fill="var(--paper)" stroke="var(--rule)"><rect x="20" y="25" width="260" height="170"/><rect x="400" y="25" width="260" height="170"/></g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="15">
+        <text x="150" y="53">FLASH: retained image</text><text x="150" y="88">vectors + instructions</text><text x="150" y="117">constant data</text><text x="150" y="155">.data initial bytes</text>
+        <text x="530" y="53">SRAM: runtime storage</text><text x="530" y="88">stack; optional heap</text><text x="530" y="117">.bss → zeroed</text><text x="530" y="155">.data → copied here</text>
+      </g>
+      <path d="M280 150h120" stroke="var(--accent)" stroke-width="2"/><text x="340" y="139" text-anchor="middle" fill="var(--accent)" font-size="13">copy →</text>
+    </svg>
+  </div>
+  <p>Check the link map against the exact device capacities. An address compiling successfully does not prove it is mapped, powered, or safe. A wrong vector location, stack bound, or data-copy range can fail before any LED code executes.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>One hardware action, three languages</h2>
+  <p>These equivalent <strong>snippets are not standalone runnable binaries</strong>. They apply only to STM32F401, after startup, GPIOA clock enable, and PA5 output configuration are complete. GPIOA BSRR is a 32-bit register at <code>0x40020018</code>. Writing bit 5 sets PA5's output latch; it does not configure the pin or generate a blink.</p>
+  <p><strong>C:</strong> include the fixed-width integer definition, then perform a volatile store inside your application.</p>
+  <pre><code>#include &lt;stdint.h&gt;
+
+/* Inside an initialized application function: */
+volatile uint32_t * const bsrr =
+    (volatile uint32_t *)0x40020018u;
+*bsrr = (uint32_t)1u &lt;&lt; 5;</code></pre>
+  <p><strong>Rust:</strong> the raw pointer operation requires an unsafe block; the programmer must establish address validity and hardware preconditions.</p>
+  <pre><code>// Inside an initialized application function:
+unsafe {
+    core::ptr::write_volatile(
+        0x40020018usize as *mut u32,
+        1u32 &lt;&lt; 5,
+    );
+}</code></pre>
+  <p><strong>Zig:</strong> a volatile pointer requests the hardware-visible store. Toolchain versions and platform startup APIs vary; this supplies no startup implementation.</p>
+  <pre><code>// Inside an initialized application function:
+const bsrr: *volatile u32 = @ptrFromInt(0x40020018);
+bsrr.* = @as(u32, 1) &lt;&lt; 5;</code></pre>
+  <p>All three request a 32-bit volatile write. <strong>Volatile is not a general atomicity, race-prevention, or memory-ordering guarantee.</strong> Required barriers and synchronization depend on the hardware and concurrency. BSRR's atomic set/reset action comes from the peripheral, avoiding CPU read-modify-write of the output register; it does not protect unrelated shared state.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Run an event loop; respond to interrupts</h2>
+  <p>A simple application repeatedly polls inputs, advances small state machines, and updates outputs. An enabled interrupt can suspend that foreground code, run its handler (ISR), and return. This is not an OS thread switch. Keep handlers short and coordinate shared data explicitly. An RTOS is optional when scheduling requirements justify one.</p>
+  <p>The foreground loop can be written as <code>for (;;) { app_step(); }</code> in C, <code>loop { app_step(); }</code> in Rust, or <code>while (true) { appStep(); }</code> in Zig. Those step functions are application-defined placeholders: each should do a small, bounded piece of work and return, not wait forever for an input.</p>
+  <div class="interactive" x-data="{ step: 0, stages: ['Poll ready inputs without waiting.', 'Advance one bounded state-machine step.', 'Update outputs whose state changed.', 'Repeat; an enabled interrupt may preempt any foreground step.'] }">
+    <h3>Interactive: walk the foreground loop</h3>
+    <p id="bare-metal-step" aria-live="polite" aria-atomic="true"><strong x-text="'Step ' + (step + 1) + ': '">Step 1: </strong><span x-text="stages[step]">Poll ready inputs without waiting.</span></p>
+    <button type="button" class="btn btn-accent" @click="step = (step + 1) % stages.length" aria-controls="bare-metal-step">Next step</button>
+    <button type="button" class="btn" @click="step = 0" aria-controls="bare-metal-step">Restart loop</button>
+  </div>
+  <div class="takeaway"><strong>Practical checkpoint:</strong> locate your project's vector table, reset handler, linker memory regions, and application entry. Explain who copies .data and who configures PA5 before inserting a snippet.</div>
+  <details><summary>Self-check and answers</summary><p>Does bare-metal mean no libraries? <strong>No: it means no OS is required.</strong> Does the CPU zero .bss automatically? <strong>No: startup software normally does.</strong> Does a BSRR write start a thread? <strong>No: it requests a GPIO hardware action.</strong></p></details>
+</section>
+
+{{- end -}}

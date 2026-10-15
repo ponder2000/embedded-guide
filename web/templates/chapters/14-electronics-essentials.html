@@ -1,0 +1,134 @@
+{{- define "chapter-electronics-essentials" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Three ideas before <em>the first wire</em></h2>
+  <p class="subhead">Software can request a high pin, but electricity decides what happens next. Start with voltage, current, and resistance: enough intuition to build a small LED circuit without treating the board like a magic power source.</p>
+  <p><strong>Voltage (V)</strong> is a difference in electrical potential between two points; always ask “relative to what?” <strong>Current (I)</strong> is the rate of charge flow, measured in amperes (A), often milliamperes (mA). <strong>Resistance (R)</strong>, measured in ohms (Ω), opposes that flow. Water pressure, flow, and a narrow pipe are useful analogies, not literal descriptions.</p>
+  <p>For a resistor, <code>V = I × R</code>, so <code>I = V / R</code>. An LED is not a resistor: it needs a series resistor to limit current. Assume a red LED drops about <code>2.0 V</code>. From a <code>3.3 V</code> supply, the resistor gets <code>3.3 − 2.0 = 1.3 V</code>. With <code>330 Ω</code>, current is <code>1.3 / 330 = 0.00394 A = 3.94 mA</code>.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 220" role="img" aria-labelledby="electronics-loop-title electronics-loop-desc" style="width:100%;height:auto;">
+      <title id="electronics-loop-title">A complete LED circuit</title>
+      <desc id="electronics-loop-desc">A 3.3 volt supply connects through a 330 ohm resistor to the LED anode. The LED cathode returns to ground. About 1.3 volts falls across the resistor and 2 volts across the LED.</desc>
+      <rect x="10" y="10" width="580" height="200" rx="8" fill="var(--paper)" stroke="var(--rule)"/>
+      <g stroke="var(--ink)" stroke-width="2" fill="none">
+        <path d="M80 100 H190 M290 100 H380 M420 100 H520 V165 H80 V100"/>
+        <rect x="190" y="83" width="100" height="34" fill="var(--highlight)"/>
+        <path d="M380 80 L420 100 L380 120 Z M420 79 V121" fill="var(--paper)"/>
+        <path d="M400 73 L420 53 M411 54 L420 53 L419 62 M420 77 L440 57 M431 58 L440 57 L439 66" stroke="var(--accent)"/>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="14" fill="var(--ink)" text-anchor="middle">
+        <text x="80" y="77">3.3 V</text><text x="240" y="106">330 Ω</text><text x="520" y="190">GND</text>
+      </g>
+      <g font-family="IBM Plex Sans, sans-serif" font-size="14" fill="var(--ink-soft)" text-anchor="middle">
+        <text x="240" y="60">1.3 V drop</text><text x="400" y="145">LED: ~2.0 V drop</text><text x="300" y="190">One loop · same current throughout</text>
+      </g>
+    </svg>
+  </div>
+  <p>The drop varies with LED type, temperature, and current; this is an estimate, not a guaranteed operating point. A real GPIO high can also fall below its supply voltage under load.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Predict, then <em>calculate</em></h2>
+  <p>More resistance means less current for the same voltage difference. Explore the estimate below; its input ranges are calculator bounds, <strong>not approved hardware limits</strong>.</p>
+  <div class="interactive" x-data="{
+    supply: 3.3, drop: 2, resistance: 330, prediction: '', feedback: '',
+    valid() {
+      return [this.supply, this.drop, this.resistance].every(v => typeof v === 'number' &amp;&amp; Number.isFinite(v))
+        &amp;&amp; this.supply >= 0.1 &amp;&amp; this.supply &lt;= 5
+        &amp;&amp; this.drop >= 0.1 &amp;&amp; this.drop &lt;= 5
+        &amp;&amp; this.resistance >= 1 &amp;&amp; this.resistance &lt;= 100000;
+    },
+    usable() { return this.valid() &amp;&amp; this.drop &lt; this.supply; },
+    result() {
+      if (!this.valid()) return 'Invalid values: use the positive ranges shown. No current estimate.';
+      if (!this.usable()) return 'No forward-current estimate: the modeled LED drop must be below supply. The LED may not light.';
+      return ((this.supply - this.drop) / this.resistance * 1000).toFixed(2) + ' mA estimated — not a GPIO safety approval.';
+    },
+    check() {
+      const correct = this.usable() &amp;&amp; this.prediction === 'half';
+      this.feedback = !this.usable() ? 'Fix the calculator values before checking your prediction.' : correct
+        ? 'Correct: doubling R halves the estimated current when supply and LED drop stay fixed.'
+        : 'Choose half: I = (supply − LED drop) / R. Twice the denominator means half the current in this model.';
+      this.$dispatch('guide:feedback', { type: correct ? 'correct' : 'incorrect' });
+    }
+  }" @input="feedback = ''" @change="feedback = ''">
+    <div class="interactive-label">LED current estimator · simplified model</div>
+    <div class="controls">
+      <label for="electronics-supply">Supply (0.1–5 V)</label>
+      <input id="electronics-supply" type="number" min="0.1" max="5" step="0.1" x-model.number="supply" aria-describedby="electronics-estimate electronics-caution">
+    </div>
+    <div class="controls">
+      <label for="electronics-drop">LED drop (0.1–5 V)</label>
+      <input id="electronics-drop" type="number" min="0.1" max="5" step="0.1" x-model.number="drop" aria-describedby="electronics-estimate electronics-caution">
+    </div>
+    <div class="controls">
+      <label for="electronics-resistance">Resistance (1–100000 Ω)</label>
+      <input id="electronics-resistance" type="number" min="1" max="100000" step="1" x-model.number="resistance" aria-describedby="electronics-estimate electronics-caution">
+    </div>
+    <p id="electronics-estimate" class="readout" role="status" aria-live="polite" aria-atomic="true" x-text="result()">3.94 mA estimated — not a GPIO safety approval.</p>
+    <p id="electronics-caution">Even a valid result may exceed GPIO, LED, or resistor ratings. Check per-pin and total GPIO limits before wiring. A 120 Ω choice here is illustrative, not a recommendation.</p>
+    <div class="controls">
+      <label for="electronics-prediction">Self-check: double only the resistance. Current becomes…</label>
+      <select id="electronics-prediction" x-model="prediction">
+        <option value="">Choose an answer</option>
+        <option value="double">Twice as much</option>
+        <option value="half">Half as much</option>
+        <option value="same">The same</option>
+      </select>
+      <button type="button" class="btn btn-accent" @click="check()">Check prediction</button>
+    </div>
+    <p role="status" aria-live="polite" aria-atomic="true" x-text="feedback"></p>
+  </div>
+  <div class="takeaway"><strong>Try this:</strong> compare 330 Ω and 660 Ω at the default voltages: about 3.94 mA and 1.97 mA. Then set the drop equal to the supply. Notice why a calculation must reject an unsuitable model instead of displaying a misleading negative current.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>GPIO is a <em>signal</em>, not a power socket</h2>
+  <p>A GPIO can source or sink only limited current. Read your exact MCU datasheet and board schematic: check recommended operating conditions, output-voltage guarantees at load, per-pin current, and combined port/chip limits. <strong>Absolute maximum ratings are damage boundaries, not design targets.</strong> Several individually modest LEDs can still exceed a shared limit.</p>
+  <p>Ground is the voltage reference and return path. Low-voltage boards exchanging non-isolated signals normally need a common ground. Connect their grounds, not their different supply rails. A 5 V signal can damage a 3.3 V input: use suitable level translation unless the exact pin and operating conditions explicitly allow it. A board accepting 5 V through USB does not make its GPIO 5 V tolerant.</p>
+  <div class="note"><strong>Keep this lesson low-voltage:</strong> no mains wiring. Never connect a motor directly to GPIO; use a rated driver and appropriate inductive-load protection. Do not connect unknown powered equipment or join power sources casually.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>From schematic to <em>breadboard</em></h2>
+  <p>On a typical solderless breadboard, each five-hole strip connects internally; the center gap separates the two sides. Power rails run lengthwise but may be split halfway. Confirm your board's connections with power disconnected; printed lines alone are not proof.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 600 235" role="img" aria-labelledby="electronics-board-title electronics-board-desc" style="width:100%;height:auto;">
+      <title id="electronics-board-title">Breadboard strips and LED polarity</title>
+      <desc id="electronics-board-desc">Five holes on either side of the center gap form separate connected groups. An LED's anode usually has the longer lead; its cathode is usually marked by a shorter lead and a flat case edge. Put the leads in separate connected groups.</desc>
+      <rect x="10" y="10" width="580" height="215" rx="8" fill="var(--paper)" stroke="var(--rule)"/>
+      <g stroke="var(--rule)" stroke-width="6">
+        <path d="M42 91 H150 M204 91 H312 M42 141 H150 M204 141 H312"/>
+      </g>
+      <path d="M177 65 V170" stroke="var(--ink-soft)" stroke-width="2" stroke-dasharray="5 5"/>
+      <g fill="var(--paper)" stroke="var(--ink)" stroke-width="2">
+        <circle cx="42" cy="91" r="5"/><circle cx="69" cy="91" r="5"/><circle cx="96" cy="91" r="5"/><circle cx="123" cy="91" r="5"/><circle cx="150" cy="91" r="5"/>
+        <circle cx="204" cy="91" r="5"/><circle cx="231" cy="91" r="5"/><circle cx="258" cy="91" r="5"/><circle cx="285" cy="91" r="5"/><circle cx="312" cy="91" r="5"/>
+        <circle cx="42" cy="141" r="5"/><circle cx="69" cy="141" r="5"/><circle cx="96" cy="141" r="5"/><circle cx="123" cy="141" r="5"/><circle cx="150" cy="141" r="5"/>
+        <circle cx="204" cy="141" r="5"/><circle cx="231" cy="141" r="5"/><circle cx="258" cy="141" r="5"/><circle cx="285" cy="141" r="5"/><circle cx="312" cy="141" r="5"/>
+      </g>
+      <path d="M435 99 V190 M480 99 V164" stroke="var(--ink)" stroke-width="3"/>
+      <path d="M425 99 V67 A32 32 0 0 1 64 0 V99 Z" fill="var(--highlight)" stroke="var(--ink)" stroke-width="2"/>
+      <path d="M489 74 V99" stroke="var(--accent)" stroke-width="4"/>
+      <g font-family="IBM Plex Sans, sans-serif" font-size="14" fill="var(--ink-soft)" text-anchor="middle">
+        <text x="177" y="42">Separate five-hole strips</text><text x="177" y="200">Center gap: no connection across</text>
+        <text x="458" y="42" fill="var(--ink)">Typical through-hole LED</text>
+        <text x="410" y="210">Anode (+)</text><text x="526" y="185">Cathode (−)</text>
+        <text x="535" y="117" font-family="IBM Plex Mono, monospace" font-size="12">flat edge</text>
+      </g>
+    </svg>
+  </div>
+  <p>An LED's anode usually has the longer lead; the cathode usually has a shorter lead and flat case edge. Trimmed leads and unusual packages defeat those clues: verify its datasheet. Both legs in one connected strip bypass the LED. Check the board pinout too: a header position, a GPIO name, and a chip package pin number are different things.</p>
+  <ul>
+    <li><strong>Power off:</strong> identify GND, the intended GPIO, LED polarity, resistor value, and rail breaks.</li>
+    <li><strong>Trace the loop:</strong> GPIO → resistor → anode → cathode → GND. The resistor may go on either side, but must remain in series.</li>
+    <li><strong>Check ratings:</strong> confirm voltage compatibility, LED current, resistor power, and GPIO per-pin/total budgets.</li>
+    <li><strong>Try safely:</strong> after verification, power up and toggle slowly. If it stays dark, disconnect power before changing wires; never “fix” it by removing the resistor.</li>
+  </ul>
+</section>
+
+{{- end -}}

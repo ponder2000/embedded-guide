@@ -3,8 +3,8 @@
 <section>
   <div class="section-number">SECTION 01</div>
   <h2>The chip wakes up at a <em>fixed address</em></h2>
-  <p class="subhead">When power rises, the CPU has no concept of your program. It does exactly one thing it was hard-wired to do at the factory: read two words from the very start of flash. Those two words — the <em>vector table</em> — are the whole reason a cold chip ever finds your code.</p>
-  <p>On a Cortex-M, flash is mapped at <code>0x08000000</code>, and the first entries of the vector table live right there:</p>
+  <p class="subhead">On reset, Cortex-M hardware reads the initial stack pointer and reset-handler address from the vector table in the selected boot region. That tells the core where its stack begins and where to execute your first startup instruction.</p>
+  <p>For normal main-flash boot on the STM32F1/F4 examples here, flash starts at <code>0x08000000</code> and is aliased into the boot region at address zero. Flash placement and boot selection are MCU-specific, not a universal Cortex-M address. The table begins with:</p>
   <ul>
     <li><strong>Offset 0</strong> — the initial <em>Stack Pointer</em> (where the stack will grow from).</li>
     <li><strong>Offset 4</strong> — the address of <code>Reset_Handler</code>, the first instruction the CPU runs.</li>
@@ -65,7 +65,7 @@
        x-data="{
          step: 0,
          steps: [
-           { title: 'Power on / reset',          caption: 'Power rises. The CPU loads its initial Stack Pointer from vector table[0] at 0x08000000 — straight into the SP register, in hardware.' },
+            { title: 'Power on / reset',          caption: 'Hardware loads the initial MSP from vector table[0] in the selected boot region. In this STM32 main-flash boot example, flash at 0x08000000 is aliased at zero.' },
            { title: 'Jump to Reset_Handler',     caption: 'The CPU loads the Reset_Handler address from vector table[1] and jumps to it. This is the first instruction of YOUR image to run — but main() is still far off.' },
            { title: 'Copy .data → RAM',           caption: 'Startup code copies the .data section (initialised globals, e.g. int x = 7;) from its image in flash into RAM, so those variables hold their values.' },
            { title: 'Zero .bss',                  caption: 'Startup code zeroes the .bss section in RAM — every uninitialised global (and static) becomes 0, exactly as C promises.' },

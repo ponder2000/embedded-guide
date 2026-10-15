@@ -31,6 +31,8 @@ desktop and a slide-out drawer with focus trapping, Escape/backdrop dismissal,
 and scroll locking on smaller screens. Chapter links load ordinary
 static pages, with the current page highlighted—no SPA or JavaScript routing.
 Navigation remains available without JavaScript.
+Sidebar categories start collapsed on the overview; a chapter page opens only
+its own category. Each category can be expanded independently with mouse or keyboard.
 
 ## Browser features
 
@@ -163,10 +165,29 @@ make help
 
 ## Chapters
 
-**Foundations** — what an embedded system is · bits/bytes/hex/two's complement ·
-bitwise ops & registers (interactive).
+**Foundations** — what an embedded system is · electronics essentials and LED
+current calculator · bits/bytes/hex/two's complement · embedded C, types, pointers,
+and masks · bitwise ops & registers (interactive).
 **The Machine** — memory map & memory-mapped I/O · boot & startup (stepper) ·
 clocks & prescalers (calculator).
 **Talking to the World** — GPIO (toggle) · interrupts & NVIC (stepper) ·
 timers & PWM (dimmer) · UART (frame builder) · SPI & I²C.
 **Going Deeper** — ADC (quantisation explorer) · low power, `volatile` & the C runtime.
+**Practical Firmware Development** — architecture vs Cortex-M core vs MCU vs board;
+memory maps and datasheet jargon · bare-metal startup, memory layout, event loops,
+and equivalent C/Rust/Zig register-write snippets · build/flash/debug workflow ·
+a first NUCLEO-F401RE heartbeat project, from blocking delay to nonblocking timing.
+
+### A beginner's fast path
+
+Start with **What is embedded? → Electronics essentials → Bits and bytes →
+Embedded C → Bitwise and registers**. Then open **Practical Firmware Development**
+for Cortex-M/datasheet orientation, bare-metal execution, and the build/debug
+workflow. Try the first board project, returning to GPIO, clocks, and interrupts
+as needed. The practical examples name their exact device; register addresses,
+pin labels, and electrical limits are not portable to an arbitrary board.
+
+The C/Rust/Zig comparison consists of equivalent MMIO snippets, not standalone
+firmware binaries. Each requires completed startup, the correct target/linker
+configuration, and initialized GPIO. The first-project lesson instead uses a
+vendor-generated C/HAL project to give a reproducible hardware starting point.

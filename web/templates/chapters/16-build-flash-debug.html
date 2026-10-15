@@ -1,0 +1,77 @@
+{{- define "chapter-build-flash-debug" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Your computer builds; <em>the board runs</em></h2>
+  <p class="subhead">The <strong>host</strong> is your development computer. The <strong>target</strong> is the microcontroller. Building firmware on one machine does not mean that machine can execute it: an STM32F401 needs Arm instructions, not your laptop's native program format.</p>
+  <p>A <strong>cross-toolchain</strong> runs on the host but produces code for the target. STM32CubeIDE supplies a supported Arm toolchain and integrates project generation, building, programming, and debugging. Start with its board selector for <strong>NUCLEO-F401RE</strong>, not a random project's compiler command or linker settings.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 190" role="img" aria-label="Host build pipeline: preprocess, compile, assemble, and link to produce a target ELF file" style="width:100%;height:auto;">
+      <g fill="var(--paper)" stroke="var(--ink)">
+        <rect x="10" y="45" width="140" height="65"/><rect x="170" y="45" width="140" height="65"/>
+        <rect x="330" y="45" width="140" height="65"/><rect x="490" y="45" width="140" height="65"/>
+        <path d="M150 78h20m140 0h20m140 0h20"/>
+      </g>
+      <g fill="var(--ink)" font-family="monospace" font-size="14" text-anchor="middle">
+        <text x="80" y="72">Preprocess</text><text x="80" y="94">includes/macros</text>
+        <text x="240" y="72">Compile</text><text x="240" y="94">C → assembly</text>
+        <text x="400" y="72">Assemble</text><text x="400" y="94">→ object files</text>
+        <text x="560" y="72">Link</text><text x="560" y="94">→ target ELF</text>
+      </g>
+      <text x="320" y="153" text-anchor="middle" fill="var(--accent)" font-size="15">All four stages happen on the host, for the target.</text>
+    </svg>
+  </div>
+  <p>Preprocessing expands headers and macros; compilation translates C into assembly; assembly creates machine-code object files. Linking combines those objects with libraries and resolves references between them. A missing header is not the same failure as an undefined function at link time: identify the failing stage before changing settings.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Give the program <em>a home and a beginning</em></h2>
+  <p class="subhead">Machine instructions alone are not a bootable application. The linker script describes the selected chip's flash and RAM, while startup code prepares the C environment before calling <code>main()</code>.</p>
+  <p>Startup normally supplies the vector table and reset handler, copies initialized data into RAM, and clears zero-initialized storage. The linker places these sections into appropriate memory regions. Keep the generated startup file and linker script matched to the exact device; copying them from another STM32 can produce a successful build that cannot boot.</p>
+  <p>The build's <strong>ELF</strong> contains sections, address information, and, in a debug build, symbols connecting instructions to source lines and variable names. A <strong>raw binary</strong> contains bytes but does not describe where to program them. Never guess a binary's destination address: use the project's documented memory layout. For this lesson, let CubeIDE program its generated ELF.</p>
+  <div class="takeaway"><strong>Hands-on:</strong> build the generated board project. Find its ELF, linker script, startup file, and build console. Record the first error if building fails; later errors may merely be consequences. Inspect the memory-usage summary before adding features.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Flash through a <em>debug probe</em></h2>
+  <p class="subhead">Flashing writes the application into nonvolatile memory. A debug probe bridges USB on your computer to the target's debugging interface; it is not simply a serial cable.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 200" role="img" aria-label="Computer USB connects to onboard ST-LINK, which uses SWD to communicate with the STM32 target; UART logging is a separate function" style="width:100%;height:auto;">
+      <g fill="var(--paper)" stroke="var(--ink)">
+        <rect x="10" y="45" width="140" height="80"/><rect x="225" y="45" width="170" height="80"/><rect x="470" y="45" width="160" height="80"/>
+        <path d="M150 85h75m170 0h75"/>
+      </g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="15">
+        <text x="80" y="79">Computer</text><text x="80" y="103">CubeIDE</text>
+        <text x="310" y="79">Onboard ST-LINK</text><text x="310" y="103">debug probe</text>
+        <text x="550" y="79">STM32F401RE</text><text x="550" y="103">target</text>
+        <text x="187" y="65">USB</text><text x="433" y="65">SWD</text>
+      </g>
+      <text x="320" y="163" text-anchor="middle" fill="var(--accent)" font-size="14">UART logs are a separate data path, even when sharing a USB cable.</text>
+    </svg>
+  </div>
+  <p>On a stock NUCLEO-F401RE, use the onboard ST-LINK USB connector and a data-capable cable. Check the board manual's jumper and power configuration. No external probe wiring is needed for this first exercise.</p>
+  <p>For a separate probe, SWD typically needs SWDIO, SWCLK, common GND, and target-voltage reference; reset may also be useful. <strong>Voltage reference is not guaranteed to supply power.</strong> Check both manuals and voltage compatibility before connecting anything.</p>
+  <p>Select the project's ST-LINK debug configuration in CubeIDE and launch Debug. Accept programming only for your connected practice board. A virtual COM port, if available and routed correctly, carries UART traffic; opening it neither flashes firmware nor automatically makes <code>printf</code> work.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Stop, inspect, <em>then resume</em></h2>
+  <p>Use a debug build and configure a breakpoint at <code>main()</code>. Reset or restart through the debugger, verify that execution stops there, then step past generated initialization. Watch a variable that is in scope; resume to let the application run normally. A halted processor cannot blink an LED.</p>
+  <p>Optimization can remove variables, reorder operations, and make source stepping surprising. Use the project's debug-friendly optimization setting rather than adding <code>volatile</code> everywhere. Breakpoints also disturb timing; peripherals and watchdogs may continue unless specifically configured to freeze.</p>
+  <div class="interactive" x-data="{ built: false, stopped: false, resumed: false }">
+    <div class="interactive-label">Bench checklist · mark only what you observed</div>
+    <div class="controls">
+      <button type="button" class="btn" @click="built = !built" :aria-pressed="built">ELF built</button>
+      <button type="button" class="btn" @click="stopped = !stopped" :aria-pressed="stopped">Stopped at main</button>
+      <button type="button" class="btn" @click="resumed = !resumed" :aria-pressed="resumed">Resumed execution</button>
+    </div>
+    <p role="status" aria-live="polite" x-text="built &amp;&amp; stopped &amp;&amp; resumed ? 'Ready: build, programming, and debugger control have been observed.' : 'Not finished: confirm each milestone on the actual board.'">Confirm each milestone on the actual board.</p>
+  </div>
+  <div class="takeaway"><strong>Self-check:</strong> why can an ELF support source breakpoints while a raw binary cannot supply source symbols? Why is a serial terminal not a debugger? Next, turn these tools into a measurable <a href="{{ url "/chapter/first-project/" }}">first project</a>.</div>
+</section>
+
+{{- end -}}

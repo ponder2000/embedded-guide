@@ -1,0 +1,71 @@
+{{- define "chapter-mcu-datasheet" -}}
+
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>From architecture to board</h2>
+  <p class="subhead">A processor family is not a complete microcontroller specification. Learn which name answers which question before copying a register address or enabling a feature.</p>
+  <p><strong>Learning objectives:</strong> distinguish architecture, instruction set, core, chip, and board; navigate a memory map; and choose the right document for a register operation.</p>
+  <p>An <strong>architecture</strong> specifies the programmer-visible machine: instructions, registers, exceptions, and memory behavior. Its <strong>instruction set architecture (ISA)</strong> describes the instructions and their encoding. A <strong>Cortex-M core</strong> is Arm's processor intellectual property implementing an architecture. A vendor integrates that core with flash, SRAM, clocks, and peripherals to make an <strong>MCU</strong>. A development board adds power, connectors, debugging hardware, and external components.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 210" role="img" aria-label="Armv7E-M architecture is implemented by Cortex-M4 core, integrated into STM32F401RET6 MCU, mounted on NUCLEO-F401RE board" style="width:100%;height:auto;">
+      <g fill="var(--surface)" stroke="var(--rule)">
+        <rect x="10" y="40" width="145" height="105"/><rect x="180" y="40" width="145" height="105"/><rect x="350" y="40" width="145" height="105"/><rect x="520" y="40" width="150" height="105"/>
+      </g>
+      <path d="M155 92h25m145 0h25m145 0h25" stroke="var(--accent)" stroke-width="2"/>
+      <g fill="var(--ink)" text-anchor="middle" font-size="14">
+        <text x="82" y="77">Architecture</text><text x="82" y="105">Armv7E-M</text>
+        <text x="252" y="77">Core IP</text><text x="252" y="105">Cortex-M4</text>
+        <text x="422" y="77">MCU part</text><text x="422" y="105">STM32F401RET6</text>
+        <text x="595" y="77">Board</text><text x="595" y="105">NUCLEO-F401RE</text>
+      </g>
+      <text x="340" y="184" text-anchor="middle" fill="var(--ink-soft)" font-size="14">Each layer adds details; no single name specifies everything.</text>
+    </svg>
+  </div>
+  <p>Cortex-M0 and M0+ implement <strong>Armv6-M</strong>; M3 implements <strong>Armv7-M</strong>; M4 and M7 implement <strong>Armv7E-M</strong>; M23 and M33 implement the Baseline and Mainline variants of <strong>Armv8-M</strong>, respectively. Cortex-M executes Thumb instructions, but supported subsets differ: do not assume every core supports every Thumb-2 instruction. DSP instructions, floating-point hardware, caches, and security features are not universal.</p>
+  <p>The STM32F401RET6 contains a Cortex-M4 with a single-precision FPU, an optional core feature that this device includes. It has <strong>512 KiB flash and 96 KiB SRAM</strong>. Those capacities do not describe every STM32F401 variant, let alone every Cortex-M4 MCU. Match the full part number and package to the datasheet.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Addresses locate bytes; bits select behavior</h2>
+  <p><strong>Flash</strong> retains firmware without power. <strong>SRAM</strong> holds working data while powered. <strong>Peripheral registers</strong> expose hardware controls through memory-mapped addresses; they are not ordinary storage. The STM32F401 maps flash at <code>0x08000000</code>, SRAM at <code>0x20000000</code>, and GPIOA at <code>0x40020000</code>. Boot aliases can make another address refer to the selected boot memory.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 205" role="img" aria-label="GPIOA base address 0x40020000 plus BSRR byte offset 0x18 equals register address 0x40020018; writing bit 5 sets PA5" style="width:100%;height:auto;">
+      <rect x="15" y="20" width="650" height="165" fill="var(--paper)" stroke="var(--rule)"/>
+      <g text-anchor="middle" fill="var(--ink)" font-size="16">
+        <text x="340" y="58">GPIOA base + register byte offset = address</text>
+        <text x="340" y="94">0x40020000 + 0x18 = 0x40020018</text>
+        <text x="340" y="132">32-bit BSRR write: 1 shifted left by 5</text>
+      </g>
+      <text x="340" y="163" text-anchor="middle" fill="var(--accent)" font-size="14">Offset 0x18 means 24 bytes, not bit 24.</text>
+    </svg>
+  </div>
+  <p>A byte contains eight bits; <strong>1 KiB is 1024 bytes</strong>, so 512 KiB is 524,288 bytes. A 32-bit register occupies four byte addresses, although the manual determines permitted access widths. Base-plus-offset arithmetic uses bytes, while a mask such as <code>1u &lt;&lt; 5</code> selects bit 5 within a value.</p>
+  <p>Use C <code>uint32_t</code>, Rust <code>u32</code>, or Zig <code>u32</code> for a documented 32-bit access. Register addresses must satisfy the device's alignment rules; arbitrary byte writes or misaligned pointers are not substitutes. STM32F401 uses little-endian data layout: a stored ordinary word <code>0x12345678</code> places byte <code>0x78</code> at its lowest address. Endianness does not change the manual's bit numbers.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Choose the document that answers the question</h2>
+  <ul>
+    <li><strong>Datasheet:</strong> exact device capacities, package pins, voltage limits, and electrical timing.</li>
+    <li><strong>Reference manual:</strong> peripheral operation, register offsets, fields, and clock dependencies.</li>
+    <li><strong>Programming manual or core guide:</strong> instructions, exception handling, and core registers.</li>
+    <li><strong>Board schematic:</strong> actual wiring, LEDs, jumpers, connectors, and power paths.</li>
+    <li><strong>Errata:</strong> silicon limitations and required workarounds for the relevant revision.</li>
+  </ul>
+  <p>For PA5 on STM32F401, open reference manual <strong>RM0368</strong>. Find RCC's <code>AHB1ENR</code> and its <code>GPIOAEN</code> clock gate, then GPIOA's <code>MODER</code>: PA5 uses bits 11:10, with <code>01</code> selecting general-purpose output. Configure output type, speed, and pulls as appropriate. Follow the documented clock-enable delay/readback requirements before accessing GPIO. Finally locate <code>BSRR</code>, offset <code>0x18</code>: bits 0–15 set corresponding outputs; bits 16–31 reset them.</p>
+  <p>The Nucleo schematic establishes whether PA5 actually drives LD2 on your board revision. A core guide cannot tell you that. Check pin multiplexing and board connections before claiming a register write will light an LED.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Read the access rules before writing</h2>
+  <p>A <strong>reset value</strong> describes the documented state after the specified reset, not a guarantee about the current state after startup code ran. <strong>RW</strong> means read/write; <strong>RO</strong> means read-only; <strong>W1C</strong> means writing one clears the corresponding flag. Read-modify-write on a W1C status register can accidentally clear unrelated pending flags. Reads can also have side effects.</p>
+  <p>Respect reserved-bit instructions and use documented masks. Read-modify-write may suit a normal configuration field, but can race with an interrupt modifying the same register. GPIO BSRR provides a hardware atomic bit action without a CPU read-modify-write; that does not make a whole multi-register configuration atomic.</p>
+  <div class="takeaway"><strong>Practical checkpoint:</strong> record your exact MCU, GPIOA base, BSRR offset, PA5 mode field, and clock-enable bit. Beside each, name the document that establishes it.</div>
+  <details><summary>Self-check and answers</summary><p>Does Cortex-M4 imply 512 KiB flash? <strong>No: the MCU part determines capacity.</strong> Is offset 0x18 a bit index? <strong>No: it is 24 bytes.</strong> Can you preserve W1C flags by writing back every read bit? <strong>No: ones would clear them.</strong></p></details>
+  <p>Official starting points: <a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f401re.html">STM32F401RE documentation</a> and <a href="https://www.st.com/en/evaluation-tools/nucleo-f401re.html">NUCLEO-F401RE board documents</a>. Select the latest applicable revisions.</p>
+</section>
+
+{{- end -}}
