@@ -43,13 +43,31 @@
       </div>
     </header>
 
-    <section class="landing-section progress-index" aria-labelledby="progress-heading">
-      <div class="section-heading-row"><div><div class="eyebrow">Pick up a signal</div><h2 id="progress-heading">Your learning map</h2></div><span class="overall-progress" aria-live="polite">0 / {{ .ChapterNum }} chapters read</span></div>
+    <div class="landing-section purpose-grid">
+      <section aria-labelledby="why-heading">
+        <div class="eyebrow">Why this guide exists</div>
+        <h2 id="why-heading">Understand it. <em>Don't just copy it.</em></h2>
+        <p>Tutorials give you code. Datasheets give you details. This guide builds the missing mental picture: how your code makes real hardware respond.</p>
+      </section>
+      <section aria-labelledby="audience-heading">
+        <div class="eyebrow">Who it's for</div>
+        <h2 id="audience-heading">Curious coders. <em>Future firmware builders.</em></h2>
+        <p>Students, software developers moving closer to hardware, and hobbyists ready to look beneath library calls. Basic programming helps; a little C is useful. No board needed to start.</p>
+      </section>
+      <section aria-labelledby="path-heading">
+        <div class="eyebrow">What you'll learn</div>
+        <h2 id="path-heading">Finish with a model <em>you can build on.</em></h2>
+        <ul><li>Trace what happens from reset to a pin changing.</li><li>Explain registers, interrupts, timing, and buses.</li><li>Approach your first bare-metal project with a datasheet—not just a copied snippet.</li></ul>
+      </section>
+    </div>
+
+    <section class="landing-section progress-index compact-map" aria-labelledby="progress-heading">
+      <div class="section-heading-row"><h2 id="progress-heading">Your learning map</h2><span class="overall-progress" aria-live="polite">0 / {{ .ChapterNum }} chapters read</span></div>
       <p class="progress-legend"><span>○ Not read</span><span>◐ In progress</span><span>✓ Read</span></p>
       <div class="chapter-index">
         {{- $counts := .SectionCounts }}
         {{- range .Parts }}{{ range .Chapters }}
-        <a class="index-chapter" href="{{ url (printf "/chapter/%s/" .Slug) }}" data-chapter-link="{{ .Slug }}" data-sections="{{ index $counts .Slug }}">
+        <a class="index-chapter" href="{{ url (printf "/chapter/%s/" .Slug) }}" data-chapter-link="{{ .Slug }}" data-sections="{{ index $counts .Slug }}" title="{{ .Summary }}">
           <span class="sidebar-number">{{ printf "%02d" .Num }}</span>
           <span class="index-chapter-body"><strong>{{ safeHTML .Title }}</strong><span class="index-section-progress">0 / {{ index $counts .Slug }} sections read</span><span class="section-pips" aria-hidden="true">{{ range seq (index $counts .Slug) }}<i data-section-pip="{{ . }}"></i>{{ end }}</span></span>
           <span class="chapter-status" aria-label="Not read">○</span>
@@ -58,34 +76,14 @@
       </div>
     </section>
 
-    <section class="quick-check landing-section" aria-labelledby="check-heading">
+    <details class="landing-section experiment-preview">
+      <summary>Try a 10-second experiment <span aria-hidden="true">↗</span></summary>
+    <section class="quick-check" aria-labelledby="check-heading">
       <div><div class="eyebrow">A tiny experiment</div><h2 id="check-heading">Which mask turns on bit 5?</h2><p>Bits start at zero. Pick a mask and test your intuition.</p></div>
       <div class="answer-options"><button class="btn" data-answer="incorrect" type="button">0x05</button><button class="btn" data-answer="correct" type="button">0x20</button><button class="btn" data-answer="incorrect" type="button">0x10</button></div>
       <p class="answer-feedback" role="status" aria-live="polite">Try it. No score, no pressure.</p>
     </section>
-
-    <section class="landing-section" aria-labelledby="why-heading">
-      <div class="eyebrow">Why this guide exists</div>
-      <h2 id="why-heading">Less memorising. More <em>“oh, that's how it works.”</em></h2>
-      <p>Tutorials tell you what to type. Datasheets tell you what a register does. This guide connects the two: see how bits become voltages, clocks drive peripherals, and interrupts bring a chip to life.</p>
-    </section>
-
-    <section class="landing-section" aria-labelledby="audience-heading">
-      <div class="eyebrow">Who it's for</div>
-      <h2 id="audience-heading">Curious about the hardware side?</h2>
-      <div class="landing-grid">
-        <div class="landing-card"><span class="card-kicker">01 / Starting out</span><h3>Your first microcontroller</h3><p>Make sense of bits, memory, and peripherals before getting lost in a board-specific tutorial.</p></div>
-        <div class="landing-card"><span class="card-kicker">02 / Going underneath</span><h3>Beyond the library call</h3><p>Already blinking LEDs? Discover what the registers and hardware are doing behind the API.</p></div>
-        <div class="landing-card"><span class="card-kicker">03 / Coming back</span><h3>A clearer refresher</h3><p>Revisit interrupts, timers, and serial buses with a visual reference you can dip into.</p></div>
-      </div>
-      <p class="landing-footnote">Basic programming knowledge helps. A little C will make the examples easier to follow; you don't need a development board to explore the guide.</p>
-    </section>
-
-    <section class="landing-section" aria-labelledby="path-heading">
-      <div class="eyebrow">What you'll learn</div>
-      <h2 id="path-heading">From a single bit to a system that responds.</h2>
-      <p>Bits → registers → memory and clocks → pins, interrupts, and buses → analog inputs and low power. Start anywhere on the learning map above. This is a visual companion to your chip's datasheet, not a replacement.</p>
-    </section>
+    </details>
   </main>
 </div>
 

@@ -20,6 +20,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     const saved = () => page.waitForSelector('html[data-saving="false"]');
     await page.goto(base + "/"); await ready();
     assert.equal(await page.locator(".index-chapter").count(), 13);
+    assert.ok((await page.locator(".compact-map").boundingBox()).height < 300, "Mobile learning map should stay compact");
     assert.equal(await page.locator(".guide-sidebar").evaluate(el => el.inert), true);
     await page.locator(".drawer-trigger").click();
     assert.equal(await page.locator("#guide-sidebar").getAttribute("aria-modal"), "true");
@@ -36,6 +37,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     await saved();
     assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
     await page.keyboard.press("Escape");
+    await page.locator(".experiment-preview > summary").click();
     await page.locator('[data-answer="incorrect"]').first().click();
     assert.match(await page.locator(".answer-feedback").textContent(), /Not quite/);
     await page.locator('[data-answer="correct"]').click();
@@ -92,6 +94,7 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     await page.goto(base + "/"); await ready();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.waitForFunction(() => !document.querySelector(".guide-sidebar").inert);
+    assert.ok((await page.locator(".compact-map").boundingBox()).height < 200, "Desktop learning map should fit in a short strip");
     assert.equal(await page.locator(".guide-sidebar").evaluate(el => el.inert), false);
     for (const theme of ["light", "dark"]) {
       await page.locator(".preferences summary").click();

@@ -21,7 +21,11 @@ make dev          # watch/rebuild with optional Air, otherwise same as make run
 Air rebuilds HTML/assets and restarts the preview server, not the browser.
 Override `PORT=8081` if needed. The preview server never renders templates.
 
-The homepage introduces the guide's purpose, audience, and learning path.
+The homepage introduces the guide's motivation, audience, and expected learning
+outcomes in three short panels. A compact numbered learning map keeps chapter
+and section progress visible without repeating the sidebar's full chapter list;
+chapter titles remain in hover tooltips and screen-reader labels. The optional
+experiment is collapsed.
 Overview and chapter pages share chapter navigation: a sticky left sidebar on
 desktop and a slide-out drawer with focus trapping, Escape/backdrop dismissal,
 and scroll locking on smaller screens. Chapter links load ordinary

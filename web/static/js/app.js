@@ -179,6 +179,8 @@
       if (status) { status.textContent = state === "read" ? "✓" : state === "partial" ? "◐" : "○"; status.setAttribute("aria-label", label); }
       const text = $(".index-section-progress", link);
       if (text) text.textContent = `${read.size} / ${total} sections read · ${label}`;
+      const title = $("strong", link);
+      if (title) link.title = `${title.textContent} · ${read.size}/${total} sections read`;
       $$("[data-section-pip]", link).forEach(pip => {
         const done = read.has(Number(pip.dataset.sectionPip));
         pip.classList.toggle("read", done);
