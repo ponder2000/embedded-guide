@@ -1,4 +1,8 @@
 /* Persistent themes, compact learning dashboard, and interactive states. */
+/* Hide scrollbar chrome without disabling wheel, touch, or keyboard scrolling. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
 :root {
   color-scheme: light;
   --surface: #fff;
@@ -217,6 +221,9 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .experiment-preview > summary { font-size: 12px; color: var(--accent); font-weight: 500; cursor: pointer; }
 .experiment-preview > summary span { margin-left: 8px; }
 .experiment-preview .quick-check { margin-top: 14px; }
+.author-note { margin-top: 24px; max-width: 76ch; color: var(--ink-soft); }
+.author-note p { font-size: 12px; line-height: 1.8; margin-bottom: 10px; }
+.author-note a { font-size: 12px; font-weight: 500; }
 @media (max-width: 739px) {
   .purpose-grid { grid-template-columns: 1fr; gap: 18px; }
   .purpose-grid > section { padding-top: 12px; }
