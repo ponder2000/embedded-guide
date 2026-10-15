@@ -5,10 +5,13 @@
 {{ template "head" (printf "%02d · Embedded Guide" .Number) }}
 </head>
 <body x-data>
+<a class="skip-link" href="#main-content">Skip to content</a>
 {{ template "topbar" (printf "CH %02d / %02d" .Number .Total) }}
 
-<div class="container">
-  <a class="back-toc" href="{{ url "/" }}">← All chapters</a>
+<div class="guide-layout">
+  {{ template "sidebar" . }}
+  <main class="guide-main chapter-main" id="main-content" tabindex="-1">
+  <a class="back-toc" href="{{ url "/" }}">← Guide overview</a>
 
   <div class="chapter-eyebrow">Chapter {{ printf "%02d" .Number }} · {{ .Chapter.Part }}</div>
   <h1 class="chapter-title">{{ safeHTML .Chapter.Title }}</h1>
@@ -38,6 +41,7 @@
     </a>
     {{- end }}
   </nav>
+  </main>
 </div>
 
 {{ template "footer" . }}
