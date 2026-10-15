@@ -143,6 +143,14 @@ func TestGuideLayout(t *testing.T) {
 		if strings.Contains(home, `class="toc-list"`) {
 			t.Error("home still renders the old chapter-list landing page")
 		}
+		for _, marker := range []string{`class="landing-section purpose-grid"`, `progress-index compact-map`, `class="landing-section experiment-preview"`, "Approach your first bare-metal project"} {
+			if !strings.Contains(home, marker) {
+				t.Errorf("home missing concise introduction element %s", marker)
+			}
+		}
+		if strings.Index(home, `id="why-heading"`) > strings.Index(home, `id="progress-heading"`) {
+			t.Error("purpose and audience should appear before the learning map")
+		}
 		pages := map[string]string{"index.html": ""}
 		for _, chapter := range content.Chapters {
 			pages["chapter/"+chapter.Slug+"/index.html"] = chapter.Slug

@@ -193,6 +193,39 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
   .index-chapter:hover { transform: none; }
 }
 
+/* A short introduction and a compact, progress-aware chapter strip. */
+.purpose-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.purpose-grid > section { border-top: 2px solid var(--accent-soft); padding-top: 16px; }
+.purpose-grid h2 { font-size: 18px; line-height: 1.35; margin-bottom: 10px; }
+.purpose-grid p, .purpose-grid li { font-size: 12px; line-height: 1.7; color: var(--ink-soft); }
+.purpose-grid ul { padding-left: 16px; }
+.purpose-grid li + li { margin-top: 5px; }
+.compact-map { padding: 18px; background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; }
+.compact-map h2 { font-size: 18px; }
+.compact-map .progress-legend { margin: 10px 0 12px; font-size: 10px !important; }
+.compact-map .chapter-index { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 6px; }
+.compact-map .index-chapter { display: grid; grid-template-columns: 1fr auto; gap: 7px 2px; padding: 10px 7px; min-height: 48px; background: var(--surface); }
+.compact-map .sidebar-number { font-size: 13px; opacity: 1; padding-top: 0; }
+.compact-map .chapter-status { font-size: 10px; grid-column: 2; grid-row: 1; }
+.compact-map .index-chapter-body { display: contents; }
+.compact-map .index-chapter strong, .compact-map .index-section-progress {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.compact-map .section-pips { grid-column: 1 / -1; grid-row: 2; margin-top: 0; gap: 3px; }
+.compact-map .section-pips i { flex: 1; width: auto; }
+.experiment-preview { border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+.experiment-preview > summary { font-size: 12px; color: var(--accent); font-weight: 500; cursor: pointer; }
+.experiment-preview > summary span { margin-left: 8px; }
+.experiment-preview .quick-check { margin-top: 14px; }
+@media (max-width: 739px) {
+  .purpose-grid { grid-template-columns: 1fr; gap: 18px; }
+  .purpose-grid > section { padding-top: 12px; }
+  .purpose-grid h2 { font-size: 18px; margin-bottom: 7px; }
+  .compact-map { padding: 14px; }
+  .circuit-board { padding: 14px; }
+  .circuit-board svg { max-height: 150px; }
+}
+
 /* User-started simulations never autoplay, including with reduced motion. */
 .simulation-player { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--rule); }
 .simulation-heading { color: var(--ink-soft); font-size: 11px; margin-bottom: 12px; }
