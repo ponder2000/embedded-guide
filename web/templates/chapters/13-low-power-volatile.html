@@ -47,7 +47,7 @@
     </svg>
   </div>
 
-  <p>The trick is that the chip does almost nothing useful in software to go to sleep: it executes a single instruction — <code>WFI</code>, "Wait For Interrupt" — and the core simply stops fetching. It stays stopped, drawing a trickle, until a peripheral or pin raises an interrupt. Then the core wakes exactly where it left off, services the event, and dives back under. A well-written sensor node spends 99.9% of its life in Stop or Standby and is awake only in the milliseconds it takes to read a value and shout it over the radio.</p>
+  <p><code>WFI</code> means "Wait For Interrupt," but it does not select a low-power mode by itself. Firmware first configures the power mode and valid wake sources. On the STM32F1/F4 examples, Sleep and Stop retain execution context; Stop may require restoring clocks after wake. Standby loses normal execution context and wakes through reset/startup rather than continuing after WFI. A sensor node can spend most of its life asleep, but retained state, wake behavior, and current figures must come from its exact datasheet.</p>
 
   <div class="takeaway">
     <strong>The dial you're turning:</strong> deeper modes power down more of the silicon, so current falls from milliamps to nanoamps — but you give up retained state (RAM may be wiped) and pay a longer wake-up latency. Choosing a mode is choosing how patient your application can afford to be.
@@ -183,8 +183,8 @@
     </svg>
   </div>
 
-  <p>This startup code — the C runtime, often called <code>crt0</code> or the reset handler — is what makes C feel like C on bare hardware. It loads the stack pointer from the top of the vector table, copies the <code>.data</code> section (your globals with explicit initial values) out of flash into RAM, writes zeros across the <code>.bss</code> section (everything declared but uninitialised, or set to zero), and only then branches to <code>main()</code>. Skip those steps and your "global = 42" would be garbage, and your zeroed array would be full of whatever the RAM held at power-on.</p>
-  <p>And notice the <code>while (1)</code> that wraps every embedded <code>main()</code>. On a desktop, returning from main hands control back to the operating system. Here there is no operating system — return from main and the CPU falls off the end of the world into undefined behaviour. So you loop forever, doing your work or sleeping on <code>WFI</code> between interrupts.</p>
+  <p>Cortex-M hardware loads the initial MSP and reset-handler address from the vector table. Startup software then prepares the language runtime: it copies initialized <code>.data</code> from flash to RAM, clears <code>.bss</code>, performs any required platform initialization, and calls <code>main()</code>. Exact ordering and extra steps depend on the runtime. Without the required setup, globals will not reliably have the values your program expects.</p>
+  <p>A bare-metal application's <code>main()</code> normally loops forever, doing bounded work or sleeping between events. There is no operating system to receive its return value. What happens if it returns depends on startup code—many runtimes trap or enter an idle loop. Inspect that code rather than assuming a desktop-style program exit.</p>
 
   <div class="takeaway">
     <strong>The whole journey, in one breath:</strong> we started with bits — patterns of voltage that mean numbers. We watched a single bit flip a register and a register switch a real pin. We saw the chip boot, copy itself into being, and call <code>main()</code>; talk to the world over UART, SPI and I&#178;C; respond in microseconds to interrupts; and finally sleep at nanoamps, waking only when needed. "Set bit 5 of the GPIO output register to turn on the LED" is no longer a spell — it's a sentence you can read down to the silicon. That blinking chip on your bench is just bits, kept honest by <code>volatile</code>, carried by a runtime you now understand. Go build something.

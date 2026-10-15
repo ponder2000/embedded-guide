@@ -159,7 +159,7 @@
   <p>Mechanically, to negate a number you flip every bit and add one: <code>1</code> is <code>0x01</code>, its inverse is <code>0xFE</code>, plus one is <code>0xFF</code> — which is exactly how &minus;1 is stored. The beauty is that ordinary binary addition of <code>+5</code> and <code>&minus;5</code> overflows cleanly to zero, so the ALU needs no separate "subtract" logic.</p>
 
   <div class="takeaway">
-    <strong>Why this bites on small MCUs:</strong> the same byte is <code>0..255</code> as a <code>uint8_t</code> but <code>&minus;128..127</code> as an <code>int8_t</code> — identical bits, different meaning. On an 8-bit micro a loop counter that hits <code>255</code> and increments wraps to <code>0</code>; a signed sensor sum past <code>+127</code> flips negative. Overflow here isn't theoretical — pick your width and signedness deliberately, because the silicon will wrap without a word of warning.
+    <strong>Hardware patterns are not C arithmetic rules:</strong> the same byte represents <code>0..255</code> as a <code>uint8_t</code> or <code>&minus;128..127</code> as a two's-complement <code>int8_t</code>. Unsigned C arithmetic wraps modulo its width; signed overflow is undefined behavior, not a portable wraparound operation. Small integer types also undergo integer promotion before arithmetic. Choose the calculation width and the final storage type deliberately.
   </div>
 </section>
 

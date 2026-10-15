@@ -191,7 +191,7 @@
 
       <!-- GPIO peripheral -->
       <rect x="320" y="110" width="180" height="100" fill="#FFD89C" stroke="#1A1814" stroke-width="1.5"/>
-      <text x="410" y="132" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">GPIOD · ODR</text>
+      <text x="410" y="132" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#1A1814">GPIOA · ODR</text>
       <text x="410" y="147" text-anchor="middle" font-family="IBM Plex Sans" font-size="9" fill="#4A4339">output data register</text>
       <!-- mini bit row, bit5 set -->
       <g font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600">
@@ -206,7 +206,7 @@
 
       <!-- wire to pin -->
       <line x1="500" y1="173" x2="560" y2="173" stroke="#5C8A4E" stroke-width="2" marker-end="url(#mm3-arrow-g)"/>
-      <text x="530" y="166" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5C8A4E" font-weight="600">PD5</text>
+      <text x="530" y="166" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5C8A4E" font-weight="600">PA5</text>
 
       <!-- LED -->
       <circle cx="585" cy="173" r="18" fill="#B8521E" stroke="#1A1814" stroke-width="1.5"/>
@@ -226,9 +226,9 @@
     </svg>
   </div>
 
-  <p>Read that one line carefully. <code>0x40020014</code> is an address in the peripheral region from Section 1. The cast <code>(volatile uint32_t*)</code> tells the compiler "treat this number as a pointer to a 32-bit hardware register," and <code>volatile</code> forbids it from optimising the access away — every write must actually happen, in order, because the side effect is the whole point. Assigning <code>0x20</code> (binary <code>0010 0000</code>) sets bit 5, which drives pin PD5 high.</p>
+  <p>In this <strong>STM32F4-style example</strong>, <code>0x40020014</code> is GPIOA's Output Data Register. The cast <code>(volatile uint32_t*)</code> requests a 32-bit volatile hardware access; it does not make the address portable or add general memory barriers. With GPIOA clocked and PA5 configured as an output, writing <code>0x20</code> sets its output latch high—but also writes zero to the other ODR bits.</p>
 
-  <p>This is exactly why the bitwise operators matter. To flip just one pin without disturbing its neighbours you read-modify-write the register: <code>GPIOD-&gt;ODR |= (1 &lt;&lt; 5);</code> sets bit 5, and <code>GPIOD-&gt;ODR &amp;= ~(1 &lt;&lt; 5);</code> clears it. A single bit, a single voltage, a single LED.</p>
+  <p>For STM32F4 GPIO, prefer the dedicated BSRR register: <code>GPIOA-&gt;BSRR = (1u &lt;&lt; 5);</code> sets PA5, while <code>GPIOA-&gt;BSRR = (1u &lt;&lt; 21);</code> resets it. Those writes do not read and rewrite the other output bits. Always check your exact device's reference manual; other STM32 families can use different addresses and configuration registers.</p>
 
   <div class="note">
     Memory-mapped I/O is the seam between software and the physical world. Once you accept that some addresses are wires rather than storage, the rest of embedded programming is just knowing <em>which</em> address does <em>what</em> — a question every chip answers in its reference manual.

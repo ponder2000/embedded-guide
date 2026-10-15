@@ -4,7 +4,7 @@
   <div class="section-number">SECTION 01</div>
   <h2>A pin is a <em>register bit</em> in disguise</h2>
   <p class="subhead">GPIO stands for General-Purpose Input/Output: a physical pin you can read or drive from software. Each pin is wired into a small stack of registers, and bending those bits is the entire job. Tell the pin which direction it faces, then either push a voltage out of it or sample the voltage coming in.</p>
-  <p>On an STM32, every pin belongs to a port (GPIOA, GPIOB, …) and each port is a cluster of 32-bit registers sharing one base address:</p>
+  <p>This chapter uses <strong>STM32F4-style GPIO</strong>. Each pin belongs to a port (GPIOA, GPIOB, …), a cluster of 32-bit registers sharing one base address. STM32F1 devices use different configuration and clock-enable registers; do not copy these definitions between families.</p>
   <ul>
     <li><strong>MODER</strong> — sets <em>direction</em>: two bits per pin choose input, output, alternate function, or analog.</li>
     <li><strong>ODR</strong> — the Output Data Register: one bit per pin holds the level you're driving when the pin is an output.</li>
@@ -160,19 +160,27 @@
 
       <!-- code lines -->
       <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#1A1814">
-        <text x="300" y="58">RCC-&gt;AHB1ENR |= (1 &lt;&lt; 0);   // clock port A</text>
-        <text x="300" y="78">GPIOA-&gt;MODER |= (1 &lt;&lt; 10);  // PA5 = output (bits 11:10 = 01)</text>
-        <text x="300" y="120">while (1) {</text>
-        <text x="316" y="138">GPIOA-&gt;BSRR = (1 &lt;&lt; 5);    // set   — LED on</text>
-        <text x="316" y="156">delay_ms(500);</text>
-        <text x="316" y="174">GPIOA-&gt;BSRR = (1 &lt;&lt; 21);   // reset — LED off</text>
-        <text x="316" y="192">delay_ms(500);</text>
-        <text x="300" y="210">}</text>
+        <text x="280" y="58">Enable GPIOA peripheral clock</text>
+        <text x="280" y="78">Replace PA5 mode field with 01</text>
+        <text x="280" y="120">Repeat:</text>
+        <text x="296" y="138">BSRR bit 5  → set PA5</text>
+        <text x="296" y="156">Wait 500 ms</text>
+        <text x="296" y="174">BSRR bit 21 → reset PA5</text>
+        <text x="296" y="192">Wait 500 ms</text>
       </g>
     </svg>
   </div>
 
-  <p>Don't forget step zero: <code>RCC-&gt;AHB1ENR</code> gates each port's clock, and a port with no clock is deaf — writes silently do nothing. After that, <code>MODER |= (1 &lt;&lt; 10)</code> writes <code>01</code> into the two-bit field for pin 5 (bits 11:10), choosing general-purpose output. From there the loop is pure bit-flipping.</p>
+  <p>First enable GPIOA's clock using the documented RCC sequence. Then replace PA5's two-bit mode field with <code>01</code>; OR alone cannot clear an old one bit. This STM32F4 register illustration assumes startup is complete, vendor headers are included, and no concurrent code updates GPIO configuration:</p>
+  <pre><code>RCC-&gt;AHB1ENR |= (1u &lt;&lt; 0);
+(void)RCC-&gt;AHB1ENR; /* readback after clock enable */
+GPIOA-&gt;MODER = (GPIOA-&gt;MODER &amp; ~(3u &lt;&lt; 10))
+              | (1u &lt;&lt; 10);
+GPIOA-&gt;OTYPER &amp;= ~(1u &lt;&lt; 5); /* push-pull */
+GPIOA-&gt;BSRR = (1u &lt;&lt; 5);      /* set PA5 */
+/* Wait using a configured timebase, then: */
+GPIOA-&gt;BSRR = (1u &lt;&lt; 21);     /* reset PA5 */</code></pre>
+  <p>An unclocked or incorrectly configured peripheral may ignore accesses or fault; follow your chip's manual rather than relying on one failure behavior. For a complete board-based exercise with a working timebase, see <a href="{{ url "/chapter/first-project/" }}">your first hardware project</a>.</p>
 
   <div class="takeaway"><strong>Tying it together:</strong> every line here is the bitwise toolkit from earlier — <code>|=</code> to enable, a shifted mask to target one field, BSRR to set and reset without a read-modify-write. Master GPIO and you've learned the rhythm of <em>every</em> peripheral: read the datasheet, find the bits, flip them with intent.</div>
 </section>

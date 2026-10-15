@@ -96,6 +96,14 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 [data-read-state="partial"] .chapter-status { color: var(--accent); }
 .sidebar-link { font-size: 12px; padding-block: 8px; }
 .sidebar-part { margin-top: 14px; }
+.chapter-menu .sidebar-part > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; color: var(--ink-soft); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; list-style: none; cursor: pointer; }
+.sidebar-part > summary::-webkit-details-marker { display: none; }
+.sidebar-part > summary:hover { background: var(--bg); color: var(--ink); }
+.category-meta { display: inline-flex; align-items: center; flex-shrink: 0; gap: 12px; font: 10px var(--font-mono); opacity: .8; }
+.category-chevron { display: inline-block; font-size: 16px; transition: transform .18s ease; }
+.sidebar-part[open] .category-chevron { transform: rotate(45deg); }
+.sidebar-part[open] > summary { color: var(--ink); }
+.sidebar-part ul { padding-bottom: 4px; }
 .sidebar-heading { margin-top: 16px; margin-bottom: 12px; }
 .guide-layout { max-width: 1400px; }
 .topbar-inner { max-width: 1400px; }
@@ -198,6 +206,11 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 }
 
 /* A short introduction and a compact, progress-aware chapter strip. */
+article pre { margin: 16px 0; padding: 16px; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); overflow-x: auto; font: 12px/1.8 var(--font-mono); tab-size: 4; }
+article pre code { padding: 0; background: none; color: var(--ink); font: inherit; white-space: pre; }
+.interactive input[type="number"], .interactive select { max-width: 100%; padding: 7px 9px; border: 1px solid var(--rule); border-radius: 3px; }
+article details:not(.sidebar-part) { margin: 14px 0; font-size: 13px; }
+article details > summary { cursor: pointer; color: var(--accent); font-weight: 500; padding-block: 6px; }
 .purpose-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
 .purpose-grid > section { border-top: 2px solid var(--accent-soft); padding-top: 16px; }
 .purpose-grid h2 { font-size: 18px; line-height: 1.35; margin-bottom: 10px; }
@@ -208,8 +221,8 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .compact-map h2 { font-size: 18px; }
 .compact-map .progress-legend { margin: 10px 0 12px; font-size: 10px !important; }
 .compact-map .chapter-index { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 6px; }
-.compact-map .index-chapter { display: grid; grid-template-columns: 1fr auto; gap: 7px 2px; padding: 10px 7px; min-height: 48px; background: var(--surface); }
-.compact-map .sidebar-number { font-size: 13px; opacity: 1; padding-top: 0; }
+.compact-map .index-chapter { display: grid; grid-template-columns: 1fr auto; gap: 6px 2px; padding: 8px 6px; min-height: 44px; background: var(--surface); }
+.compact-map .sidebar-number { font-size: 12px; line-height: 1.3; opacity: 1; padding-top: 0; }
 .compact-map .chapter-status { font-size: 10px; grid-column: 2; grid-row: 1; }
 .compact-map .index-chapter-body { display: contents; }
 .compact-map .index-chapter strong, .compact-map .index-section-progress {

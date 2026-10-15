@@ -152,7 +152,7 @@
   <div class="section-number">SECTION 03</div>
   <h2>A faster clock is not a <em>free lunch</em></h2>
   <p class="subhead">Cranking SYSCLK higher means more instructions per second — but every edge also charges and discharges the chip's internal capacitance, and dynamic power scales roughly with frequency. Speed costs current, and battery-powered designs feel it directly.</p>
-  <p>The deeper trap is that peripherals derive their timing from the bus clock you handed them. A UART computes its baud divisor from PCLK; an SPI shifts at a fraction of PCLK; a timer counts at HCLK. Change a prescaler and forget to recompute, and the symptoms are maddening:</p>
+  <p>The deeper trap is that peripherals derive their timing from their documented clock source. A UART computes a baud divisor and an SPI divides its peripheral clock. On STM32F1, an APB timer's input is PCLK when the APB prescaler is 1, otherwise twice PCLK; the timer counter then divides by <code>PSC + 1</code>. Other families can add clock-selection rules. Change a prescaler without recomputing and the symptoms are maddening:</p>
   <ul>
     <li>Garbled serial bytes — the baud rate drifted because PCLK changed under the divisor.</li>
     <li>A "1&nbsp;second" delay loop that now fires twice as fast or twice as slow.</li>

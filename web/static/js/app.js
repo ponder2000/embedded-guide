@@ -156,7 +156,7 @@
       if (!opened) return;
       if (e.key === "Escape") { e.preventDefault(); close(); }
       if (e.key === "Tab") {
-        const focusable = $$("a[href], button:not([disabled]), select", sidebar);
+        const focusable = $$("a[href], button:not([disabled]), select, summary", sidebar).filter(el => el.getClientRects().length > 0);
         const first = focusable[0], last = focusable.at(-1);
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -213,6 +213,7 @@
   }
   const dwell = new Map(), manuallyUnread = new Set();
   function initReading() {
+    $$("article pre").forEach(block => { block.tabIndex = 0; block.setAttribute("aria-label", "Code example. Scroll horizontally if needed."); });
     sections.forEach((section, i) => {
       section.id ||= "section-" + (i + 1);
       const button = document.createElement("button");
