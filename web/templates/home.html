@@ -12,28 +12,62 @@
   {{ template "sidebar" . }}
   <main class="guide-main" id="main-content" tabindex="-1">
     <header class="landing-hero">
+      <div class="hero-copy">
       <div class="eyebrow">Small chips. Big ideas.</div>
-      <h1>Understand what happens<br>between the <em>code and the pin.</em></h1>
-      <p class="landing-intro">A visual way into embedded systems. Build a mental model of the hardware beneath your code—with clear diagrams, small experiments, and explanations that connect the dots.</p>
+      <h1>Make the<br><em>invisible click.</em></h1>
+      <p class="landing-intro">From a line of code to a live pin. Explore the circuits, bits, and signals behind embedded systems—one visual experiment at a time.</p>
       <div class="hero-actions">
         <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Start learning <span aria-hidden="true">→</span></a>
         <a class="hero-secondary" href="{{ url "/chapter/bitwise-and-registers/" }}">Try an interactive register <span aria-hidden="true">↗</span></a>
       </div>
       <div class="hero-facts"><span>{{ .ChapterNum }} focused chapters</span><span>Interactive experiments</span><span>No hardware needed to start</span></div>
+      </div>
+      <div class="circuit-board">
+        <div class="circuit-label"><span class="live-dot" aria-hidden="true"></span> CODE → SILICON → SIGNAL</div>
+        <svg viewBox="0 0 360 240" role="img" aria-label="Circuit traces carry signals from a code input through a microcontroller to an LED and sensor">
+          <g class="circuit-traces" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 65 H85 L110 90 H132 M20 170 H70 L100 140 H132 M228 90 H260 L285 65 H340 M228 140 H265 L285 170 H340 M160 65 V35 H110 V15 M200 65 V15 M160 170 V205 H110 V225 M200 170 V225"/>
+          </g>
+          <g class="circuit-signal" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 65 H85 L110 90 H132 M228 90 H260 L285 65 H340 M200 170 V225"/></g>
+          <g fill="var(--paper)" stroke="var(--accent)" stroke-width="2"><circle cx="20" cy="65" r="5"/><circle cx="20" cy="170" r="5"/><circle cx="340" cy="170" r="5"/><circle cx="110" cy="15" r="4"/><circle cx="200" cy="15" r="4"/><circle cx="110" cy="225" r="4"/><circle cx="200" cy="225" r="4"/></g>
+          <rect class="circuit-chip" x="132" y="65" width="96" height="105" rx="8"/>
+          <g stroke="var(--accent)" stroke-width="4"><path d="M132 105 H120 M132 120 H120 M132 135 H120 M228 105 H240 M228 120 H240 M228 135 H240"/></g>
+          <text x="180" y="109" text-anchor="middle" fill="var(--ink)" font-size="12" font-weight="600">MCU</text>
+          <text x="180" y="134" text-anchor="middle" fill="var(--accent)" font-size="10" font-family="IBM Plex Mono">0x20</text>
+          <circle class="circuit-light" cx="340" cy="65" r="9" fill="var(--accent)"/>
+          <text x="300" y="46" fill="var(--ink-soft)" font-size="9">LED ON</text>
+          <text x="25" y="48" fill="var(--ink-soft)" font-size="9">YOUR CODE</text>
+          <text x="290" y="194" fill="var(--ink-soft)" font-size="9">SENSOR</text>
+        </svg>
+        <button type="button" class="circuit-pulse toolbar-button">Send a signal <span aria-hidden="true">↗</span></button>
+      </div>
     </header>
+
+    <section class="landing-section progress-index" aria-labelledby="progress-heading">
+      <div class="section-heading-row"><div><div class="eyebrow">Pick up a signal</div><h2 id="progress-heading">Your learning map</h2></div><span class="overall-progress" aria-live="polite">0 / {{ .ChapterNum }} chapters read</span></div>
+      <p class="progress-legend"><span>○ Not read</span><span>◐ In progress</span><span>✓ Read</span></p>
+      <div class="chapter-index">
+        {{- $counts := .SectionCounts }}
+        {{- range .Parts }}{{ range .Chapters }}
+        <a class="index-chapter" href="{{ url (printf "/chapter/%s/" .Slug) }}" data-chapter-link="{{ .Slug }}" data-sections="{{ index $counts .Slug }}">
+          <span class="sidebar-number">{{ printf "%02d" .Num }}</span>
+          <span class="index-chapter-body"><strong>{{ safeHTML .Title }}</strong><span class="index-section-progress">0 / {{ index $counts .Slug }} sections read</span><span class="section-pips" aria-hidden="true">{{ range seq (index $counts .Slug) }}<i data-section-pip="{{ . }}"></i>{{ end }}</span></span>
+          <span class="chapter-status" aria-label="Not read">○</span>
+        </a>
+        {{- end }}{{ end }}
+      </div>
+    </section>
+
+    <section class="quick-check landing-section" aria-labelledby="check-heading">
+      <div><div class="eyebrow">A tiny experiment</div><h2 id="check-heading">Which mask turns on bit 5?</h2><p>Bits start at zero. Pick a mask and test your intuition.</p></div>
+      <div class="answer-options"><button class="btn" data-answer="incorrect" type="button">0x05</button><button class="btn" data-answer="correct" type="button">0x20</button><button class="btn" data-answer="incorrect" type="button">0x10</button></div>
+      <p class="answer-feedback" role="status" aria-live="polite">Try it. No score, no pressure.</p>
+    </section>
 
     <section class="landing-section" aria-labelledby="why-heading">
       <div class="eyebrow">Why this guide exists</div>
       <h2 id="why-heading">Less memorising. More <em>“oh, that's how it works.”</em></h2>
-      <p>Datasheets tell you what a register does. Tutorials tell you what to type. The missing piece is often the picture in between: how a bit becomes a voltage, why a clock matters, or what the CPU actually does when an interrupt arrives.</p>
-      <p>This guide is here to build that picture. Each chapter takes one idea, makes it visible, and connects it to the next.</p>
-      <div class="signal-path" aria-label="From code through a register to a physical pin">
-        <div><span class="signal-label">You write</span><code>GPIO → bit 5</code></div>
-        <span class="signal-arrow" aria-hidden="true">→</span>
-        <div><span class="signal-label">Hardware changes</span><span class="signal-bits">0010 0000</span></div>
-        <span class="signal-arrow" aria-hidden="true">→</span>
-        <div><span class="signal-label">The world responds</span><span class="signal-output"><span class="signal-led" aria-hidden="true"></span> An LED lights up</span></div>
-      </div>
+      <p>Tutorials tell you what to type. Datasheets tell you what a register does. This guide connects the two: see how bits become voltages, clocks drive peripherals, and interrupts bring a chip to life.</p>
     </section>
 
     <section class="landing-section" aria-labelledby="audience-heading">
@@ -50,17 +84,7 @@
     <section class="landing-section" aria-labelledby="path-heading">
       <div class="eyebrow">What you'll learn</div>
       <h2 id="path-heading">From a single bit to a system that responds.</h2>
-      <div class="learning-stages">
-        <div><span class="card-kicker">01 / Foundations</span><h3>Read the bits</h3><p>Numbers, masks, and registers: the vocabulary of firmware.</p></div>
-        <div><span class="card-kicker">02 / The machine</span><h3>Meet the chip</h3><p>Memory, startup, and clocks: how your code gets a place to run.</p></div>
-        <div><span class="card-kicker">03 / The outside world</span><h3>Make it respond</h3><p>Pins, interrupts, timers, and buses: the bridge from software to signals.</p></div>
-        <div><span class="card-kicker">04 / Going deeper</span><h3>Work with constraints</h3><p>Analog inputs, power, and volatile: the details that make firmware different.</p></div>
-      </div>
-    </section>
-
-    <section class="landing-section landing-start" aria-labelledby="start-heading">
-      <div><div class="eyebrow">Learn at your own pace</div><h2 id="start-heading">One concept. One experiment. One step closer.</h2><p>Start with the foundations, then use the chapter navigation to explore. This is a conceptual guide, not a replacement for your chip's datasheet.</p></div>
-      <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Open chapter 01 <span aria-hidden="true">→</span></a>
+      <p>Bits → registers → memory and clocks → pins, interrupts, and buses → analog inputs and low power. Start anywhere on the learning map above. This is a visual companion to your chip's datasheet, not a replacement.</p>
     </section>
   </main>
 </div>

@@ -51,6 +51,14 @@ func Generate(base string) (map[string][]byte, error) {
 		return nil, err
 	}
 	files := map[string][]byte{".nojekyll": {}}
+	sectionCounts := make(map[string]int, len(content.Chapters))
+	for _, chapter := range content.Chapters {
+		var partial bytes.Buffer
+		if err := r.Render(&partial, chapter.Template, nil); err != nil {
+			return nil, fmt.Errorf("count sections in %s: %w", chapter.Slug, err)
+		}
+		sectionCounts[chapter.Slug] = strings.Count(partial.String(), "<section>")
+	}
 	page := func(path, name string, data any) error {
 		var b bytes.Buffer
 		if err := r.Render(&b, name, data); err != nil {
@@ -60,10 +68,11 @@ func Generate(base string) (map[string][]byte, error) {
 		return nil
 	}
 	if err := page("index.html", "home.html", struct {
-		Parts       []content.Part
-		ChapterNum  int
-		CurrentSlug string
-	}{content.Parts(), len(content.Chapters), ""}); err != nil {
+		Parts         []content.Part
+		ChapterNum    int
+		CurrentSlug   string
+		SectionCounts map[string]int
+	}{content.Parts(), len(content.Chapters), "", sectionCounts}); err != nil {
 		return nil, err
 	}
 	for i, ch := range content.Chapters {
@@ -78,7 +87,8 @@ func Generate(base string) (map[string][]byte, error) {
 			Percent       int
 			Parts         []content.Part
 			CurrentSlug   string
-		}{ch, i + 1, len(content.Chapters), prev, next, (i + 1) * 100 / len(content.Chapters), content.Parts(), ch.Slug}
+			SectionCounts map[string]int
+		}{ch, i + 1, len(content.Chapters), prev, next, (i + 1) * 100 / len(content.Chapters), content.Parts(), ch.Slug, sectionCounts}
 		if err := page("chapter/"+ch.Slug+"/index.html", "chapter.html", data); err != nil {
 			return nil, err
 		}

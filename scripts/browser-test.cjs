@@ -1,0 +1,144 @@
+/* Optional browser regression checks. See README for running with Playwright. */
+const assert = require("node:assert/strict");
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, "");
+(async () => {
+  const browser = await chromium.launch({ channel: "chromium", headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      window.__interfaceTones = 0;
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (Audio) {
+        const original = Audio.prototype.createOscillator;
+        Audio.prototype.createOscillator = function (...args) { window.__interfaceTones++; return original.apply(this, args); };
+      }
+    });
+    const page = await context.newPage(), errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    const ready = () => page.waitForSelector('html[data-storage-ready="true"]');
+    const saved = () => page.waitForSelector('html[data-saving="false"]');
+    await page.goto(base + "/"); await ready();
+    assert.equal(await page.locator(".index-chapter").count(), 13);
+    assert.equal(await page.locator(".guide-sidebar").evaluate(el => el.inert), true);
+    await page.locator(".drawer-trigger").click();
+    assert.equal(await page.locator("#guide-sidebar").getAttribute("aria-modal"), "true");
+    assert.equal(await page.locator("#main-content").evaluate(el => el.inert), true);
+    await page.keyboard.press("Shift+Tab");
+    assert.equal(await page.locator("#guide-sidebar").evaluate(el => el.contains(document.activeElement)), true);
+    if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/mobile-drawer.png` });
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(".drawer-trigger").getAttribute("aria-expanded"), "false");
+    assert.equal(await page.evaluate(() => window.__interfaceTones), 0, "Sounds must default off");
+    await page.locator(".preferences summary").click();
+    await page.selectOption("#theme-choice", "dark");
+    await page.check("#sound-choice");
+    await saved();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.keyboard.press("Escape");
+    await page.locator('[data-answer="incorrect"]').first().click();
+    assert.match(await page.locator(".answer-feedback").textContent(), /Not quite/);
+    await page.locator('[data-answer="correct"]').click();
+    assert.match(await page.locator(".answer-feedback").textContent(), /Exactly/);
+    assert.ok(await page.evaluate(() => window.__interfaceTones > 0), "Opted-in feedback should synthesize sound");
+    await page.goto(base + "/chapter/uart/"); await ready();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    const toggles = page.locator(".section-read-toggle");
+    for (let i = 0; i < await toggles.count(); i++) {
+      if (await toggles.nth(i).getAttribute("aria-pressed") !== "true") await toggles.nth(i).click();
+    }
+    await saved();
+    await page.reload(); await ready();
+    assert.match(await page.locator("[data-reading-summary]").textContent(), /^3 \/ 3/);
+    if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/uart-dark-mobile.png`, fullPage: true });
+    await page.locator(".sim-play").click();
+    await page.waitForTimeout(700);
+    await page.locator(".sim-play").click();
+    const position = await page.locator(".simulation-readout").textContent();
+    await page.waitForTimeout(650);
+    assert.equal(await page.locator(".simulation-readout").textContent(), position, "Pause must freeze the simulation");
+    await page.locator(".sim-reset").click();
+    assert.match(await page.locator(".simulation-readout").textContent(), /^Start bit/);
+    await page.locator(".sim-step").click();
+    assert.match(await page.locator(".simulation-readout").textContent(), /^Data bit 0/);
+    await page.goto(base + "/"); await ready();
+    assert.equal(await page.locator('.index-chapter[data-chapter-link="uart"]').getAttribute("data-read-state"), "read");
+    assert.match(await page.locator(".overall-progress").textContent(), /1 \/ 13/);
+    await page.locator(".preferences summary").click();
+    assert.equal(await page.isChecked("#sound-choice"), true);
+    await page.uncheck("#tracking-choice");
+    await saved();
+    await page.goto(base + "/chapter/clocks/"); await ready();
+    assert.equal(await page.locator(".section-read-toggle").first().isDisabled(), true);
+    await page.locator(".sim-step").click();
+    assert.match(await page.locator(".simulation-readout").textContent(), /Tick 2/);
+    await page.locator(".sim-play").click();
+    await page.waitForTimeout(220);
+    await page.locator(".sim-play").click();
+    assert.equal(await page.locator(".sim-play").getAttribute("aria-pressed"), "false");
+    await page.locator(".preferences summary").click();
+    await page.check("#tracking-choice");
+    await page.click("#reset-progress");
+    await page.waitForTimeout(100);
+    await page.goto(base + "/"); await ready();
+    assert.match(await page.locator(".overall-progress").textContent(), /^0 \/ 13/);
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.goto(base + "/chapter/uart/"); await ready();
+    await page.locator(".section-read-toggle").first().click(); await saved();
+    await Promise.all([page.waitForNavigation(), page.keyboard.press("Control+Shift+R")]);
+    await ready();
+    assert.match(await page.locator("[data-reading-summary]").textContent(), /^0 \/ 3/);
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.goto(base + "/"); await ready();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.waitForFunction(() => !document.querySelector(".guide-sidebar").inert);
+    assert.equal(await page.locator(".guide-sidebar").evaluate(el => el.inert), false);
+    for (const theme of ["light", "dark"]) {
+      await page.locator(".preferences summary").click();
+      await page.selectOption("#theme-choice", theme);
+      await page.keyboard.press("Escape");
+      if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/home-${theme}.png`, fullPage: true });
+    }
+    const slugs = await page.locator(".index-chapter").evaluateAll(nodes => nodes.map(el => el.dataset.chapterLink));
+    for (const width of [360, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const slug of slugs) {
+        await page.goto(base + "/chapter/" + slug + "/"); await ready();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${slug} overflows at ${width}px`);
+        if (["boot-sequence", "interrupts", "timers-pwm"].includes(slug)) {
+          await page.locator(".sim-step").click();
+          assert.ok((await page.locator(".simulation-readout").textContent()).length > 0);
+        }
+      }
+    }
+    assert.deepEqual(errors, [], "No browser/Alpine errors expected");
+    const persisted = await page.evaluate(() => new Promise((resolve, reject) => {
+      const request = indexedDB.open("embedded-visual-guide");
+      request.onsuccess = () => { const db = request.result; const tx = db.transaction("state"); const read = tx.objectStore("state").get("preferences"); tx.oncomplete = () => { resolve(read.result.value); db.close(); }; tx.onerror = reject; };
+    }));
+    assert.equal(persisted.theme, "dark"); assert.equal(persisted.sound, true);
+    const automatic = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    const reading = await automatic.newPage(); await reading.goto(base + "/chapter/what-is-embedded/");
+    await reading.waitForSelector('html[data-storage-ready="true"]');
+    await reading.locator(".section-read-toggle").first().scrollIntoViewIfNeeded();
+    await reading.evaluate(() => scrollBy(0, 70));
+    await reading.waitForFunction(() => document.querySelector(".section-read-toggle").getAttribute("aria-pressed") === "true");
+    assert.equal(await reading.locator(".section-read-toggle").nth(1).getAttribute("aria-pressed"), "false", "Unseen section must stay unread");
+    await automatic.close();
+    const noStorage = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await noStorage.addInitScript(() => { Object.defineProperty(window, "indexedDB", { get() { throw new Error("Storage blocked"); } }); });
+    const fallback = await noStorage.newPage();
+    await fallback.goto(base + "/"); await fallback.waitForSelector('html[data-storage-ready="true"]');
+    assert.match(await fallback.locator("#storage-status").textContent(), /unavailable/);
+    await fallback.locator(".preferences summary").click(); await fallback.selectOption("#theme-choice", "dark");
+    assert.equal(await fallback.locator("html").getAttribute("data-theme"), "dark");
+    await noStorage.close();
+    const noJS = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+    const staticPage = await noJS.newPage(); await staticPage.goto(base + "/chapter/uart/");
+    assert.equal(await staticPage.locator(".sidebar-link").count(), 13);
+    assert.equal(await staticPage.locator("article section").first().evaluate(el => getComputedStyle(el).opacity), "1");
+    await noJS.close();
+    console.log("Browser checks passed: drawer, themes, IndexedDB, progress, sound preference, feedback, playback, all chapters at 360/768/1440px.");
+    await context.close();
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

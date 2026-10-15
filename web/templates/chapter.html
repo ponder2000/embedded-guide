@@ -16,7 +16,8 @@
   <div class="chapter-eyebrow">Chapter {{ printf "%02d" .Number }} · {{ .Chapter.Part }}</div>
   <h1 class="chapter-title">{{ safeHTML .Chapter.Title }}</h1>
 
-  <article>
+  <div class="chapter-reading-status" data-reading-summary aria-live="polite">Your progress is saved as you read.</div>
+  <article data-chapter="{{ .Chapter.Slug }}">
     {{ partial .Chapter.Template . }}
   </article>
 
@@ -47,6 +48,7 @@
 {{ template "footer" . }}
 <script src="{{ url "/static/js/alpine.min.js" }}" defer></script>
 <script src="{{ url "/static/js/app.js" }}" defer></script>
+<script src="{{ url "/static/js/simulations.js" }}" defer></script>
 </body>
 </html>
 {{- end -}}

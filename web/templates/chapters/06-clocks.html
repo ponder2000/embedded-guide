@@ -90,7 +90,7 @@
 
   <p>Walk it left to right: the 8&nbsp;MHz HSE feeds a PLL that multiplies by N, producing SYSCLK. The AHB prescaler divides SYSCLK into HCLK (the core and DMA bus). The APB prescaler then divides HCLK again into PCLK, which clocks the slower peripherals. Set the dials below and watch the numbers fall out.</p>
 
-  <div class="interactive"
+  <div class="interactive" data-simulation="clocks" data-simulation-name="Clock signals"
        x-data="{
          hse: 8,
          pllMul: 9,
@@ -139,7 +139,7 @@
 
     <div class="controls">
       <span class="readout">limit check&nbsp;
-        <span class="val" :style="sysclk()>72 ? 'color:#B8521E' : 'color:#5C8A4E'"
+        <span class="val" :style="sysclk()>72 ? 'color:var(--accent)' : 'color:var(--green)'"
               x-text="sysclk()>72 ? '⚠ exceeds 72 MHz' : 'OK'"></span>
       </span>
     </div>

@@ -110,7 +110,7 @@
 
   <p>Below, type any character and watch the exact frame UART would put on the wire. Note the data bits come out <strong>least-significant first</strong> — bit 0 leads, bit 7 trails. This LSB-first order trips up everyone the first time they read a logic-analyser trace.</p>
 
-  <div class="interactive"
+  <div class="interactive" data-simulation="uart" data-simulation-name="UART transmission"
        x-data="{
          ch: 'A',
          code() { return (this.ch && this.ch.length) ? this.ch.charCodeAt(0) & 0xFF : 0; },
