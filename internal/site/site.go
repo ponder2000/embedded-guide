@@ -60,9 +60,10 @@ func Generate(base string) (map[string][]byte, error) {
 		return nil
 	}
 	if err := page("index.html", "home.html", struct {
-		Parts      []content.Part
-		ChapterNum int
-	}{content.Parts(), len(content.Chapters)}); err != nil {
+		Parts       []content.Part
+		ChapterNum  int
+		CurrentSlug string
+	}{content.Parts(), len(content.Chapters), ""}); err != nil {
 		return nil, err
 	}
 	for i, ch := range content.Chapters {
@@ -75,7 +76,9 @@ func Generate(base string) (map[string][]byte, error) {
 			Number, Total int
 			Prev, Next    content.Chapter
 			Percent       int
-		}{ch, i + 1, len(content.Chapters), prev, next, (i + 1) * 100 / len(content.Chapters)}
+			Parts         []content.Part
+			CurrentSlug   string
+		}{ch, i + 1, len(content.Chapters), prev, next, (i + 1) * 100 / len(content.Chapters), content.Parts(), ch.Slug}
 		if err := page("chapter/"+ch.Slug+"/index.html", "chapter.html", data); err != nil {
 			return nil, err
 		}

@@ -10,6 +10,9 @@
 <meta name="description" content="A chapter-wise, animated visual guide to learning embedded systems — from bits to a blinking chip.">
 <meta name="color-scheme" content="light">
 <title>{{ . }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url "/static/css/app.css" }}">
 {{- end -}}
 
@@ -29,4 +32,31 @@
 <footer>
   BITS → BLINKING CHIP · A VISUAL GUIDE TO EMBEDDED SYSTEMS
 </footer>
+{{- end -}}
+
+{{- define "sidebar" -}}
+<aside class="guide-sidebar" aria-label="Guide navigation">
+  <details class="chapter-menu" open>
+    <summary>Explore the guide <span aria-hidden="true">↕</span></summary>
+    <nav aria-label="Chapters">
+      <a class="sidebar-overview" href="{{ url "/" }}"{{ if not .CurrentSlug }} aria-current="page"{{ end }}>Overview <span aria-hidden="true">↗</span></a>
+      <div class="sidebar-heading">Your learning path</div>
+      {{- $current := .CurrentSlug }}
+      {{- range .Parts }}
+      <div class="sidebar-part">
+        <h2>{{ .Name }}</h2>
+        <ul>
+          {{- range .Chapters }}
+          <li><a class="sidebar-link" href="{{ url (printf "/chapter/%s/" .Slug) }}"{{ if eq $current .Slug }} aria-current="page"{{ end }}>
+            <span class="sidebar-number">{{ printf "%02d" .Num }}</span>
+            <span>{{ safeHTML .Title }}</span>
+          </a></li>
+          {{- end }}
+        </ul>
+      </div>
+      {{- end }}
+      <p class="sidebar-note">Go in order, or follow your curiosity.</p>
+    </nav>
+  </details>
+</aside>
 {{- end -}}

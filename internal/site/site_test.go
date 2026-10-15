@@ -123,6 +123,51 @@ func TestGeneratedSite(t *testing.T) {
 	}
 }
 
+func TestGuideLayout(t *testing.T) {
+	for _, base := range []string{"", "/visual-guide"} {
+		files, err := site.Generate(base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		home := string(files["index.html"])
+		for _, marker := range []string{"Why this guide exists", "Who it's for", "What you'll learn", `class="landing-hero"`} {
+			if !strings.Contains(home, marker) {
+				t.Errorf("home missing introduction: %s", marker)
+			}
+		}
+		if strings.Contains(home, `class="toc-list"`) {
+			t.Error("home still renders the old chapter-list landing page")
+		}
+		pages := map[string]string{"index.html": ""}
+		for _, chapter := range content.Chapters {
+			pages["chapter/"+chapter.Slug+"/index.html"] = chapter.Slug
+		}
+		for name, active := range pages {
+			body := string(files[name])
+			for _, marker := range []string{`class="guide-layout"`, `class="chapter-menu" open`, `aria-label="Chapters"`, `id="main-content"`, `href="#main-content"`} {
+				if !strings.Contains(body, marker) {
+					t.Errorf("%s missing layout element %s", name, marker)
+				}
+			}
+			if count := strings.Count(body, `aria-current="page"`); count != 1 {
+				t.Errorf("%s has %d current pages; want 1", name, count)
+			}
+			activeURL := base + "/"
+			if active != "" {
+				activeURL += "chapter/" + active + "/"
+			}
+			if !strings.Contains(body, `href="`+activeURL+`" aria-current="page"`) {
+				t.Errorf("%s missing correct active link", name)
+			}
+			for _, chapter := range content.Chapters {
+				if !strings.Contains(body, `href="`+base+"/chapter/"+chapter.Slug+`/"`) {
+					t.Errorf("%s missing sidebar chapter %s", name, chapter.Slug)
+				}
+			}
+		}
+	}
+}
+
 // macOS's default temp path may itself contain the /var symlink.
 func realTemp(t *testing.T) string {
 	t.Helper()

@@ -5,35 +5,63 @@
 {{ template "head" "Embedded Systems · A Visual Guide" }}
 </head>
 <body>
-{{ template "topbar" "" }}
+<a class="skip-link" href="#main-content">Skip to content</a>
+{{ template "topbar" "LEARN BY SEEING" }}
 
-<div class="container">
-  <header class="page-head">
-    <div class="eyebrow">A chapter-wise visual guide</div>
-    <h1>From <em>bits</em> to a <em>blinking</em> chip</h1>
-    <p class="lede">Embedded systems, one picture at a time. {{ .ChapterNum }} chapters of hand-drawn diagrams and hands-on, animated components — start at the top, or jump to whatever you're curious about.</p>
-  </header>
+<div class="guide-layout">
+  {{ template "sidebar" . }}
+  <main class="guide-main" id="main-content" tabindex="-1">
+    <header class="landing-hero">
+      <div class="eyebrow">Small chips. Big ideas.</div>
+      <h1>Understand what happens<br>between the <em>code and the pin.</em></h1>
+      <p class="landing-intro">A visual way into embedded systems. Build a mental model of the hardware beneath your code—with clear diagrams, small experiments, and explanations that connect the dots.</p>
+      <div class="hero-actions">
+        <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Start learning <span aria-hidden="true">→</span></a>
+        <a class="hero-secondary" href="{{ url "/chapter/bitwise-and-registers/" }}">Try an interactive register <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="hero-facts"><span>{{ .ChapterNum }} focused chapters</span><span>Interactive experiments</span><span>No hardware needed to start</span></div>
+    </header>
 
-  <main>
-    {{- range .Parts }}
-    <div class="part">
-      <div class="part-label">{{ .Name }}</div>
-      <ul class="toc-list">
-        {{- range .Chapters }}
-        <li>
-          <a class="toc-card" href="{{ url (printf "/chapter/%s/" .Slug) }}">
-            <span class="toc-num">{{ printf "%02d" .Num }}</span>
-            <span class="toc-body">
-              <h3>{{ safeHTML .Title }}</h3>
-              <p>{{ .Summary }}</p>
-              {{- if .Interactive }}<span class="badge">Interactive</span>{{ end }}
-            </span>
-          </a>
-        </li>
-        {{- end }}
-      </ul>
-    </div>
-    {{- end }}
+    <section class="landing-section" aria-labelledby="why-heading">
+      <div class="eyebrow">Why this guide exists</div>
+      <h2 id="why-heading">Less memorising. More <em>“oh, that's how it works.”</em></h2>
+      <p>Datasheets tell you what a register does. Tutorials tell you what to type. The missing piece is often the picture in between: how a bit becomes a voltage, why a clock matters, or what the CPU actually does when an interrupt arrives.</p>
+      <p>This guide is here to build that picture. Each chapter takes one idea, makes it visible, and connects it to the next.</p>
+      <div class="signal-path" aria-label="From code through a register to a physical pin">
+        <div><span class="signal-label">You write</span><code>GPIO → bit 5</code></div>
+        <span class="signal-arrow" aria-hidden="true">→</span>
+        <div><span class="signal-label">Hardware changes</span><span class="signal-bits">0010 0000</span></div>
+        <span class="signal-arrow" aria-hidden="true">→</span>
+        <div><span class="signal-label">The world responds</span><span class="signal-output"><span class="signal-led" aria-hidden="true"></span> An LED lights up</span></div>
+      </div>
+    </section>
+
+    <section class="landing-section" aria-labelledby="audience-heading">
+      <div class="eyebrow">Who it's for</div>
+      <h2 id="audience-heading">Curious about the hardware side?</h2>
+      <div class="landing-grid">
+        <div class="landing-card"><span class="card-kicker">01 / Starting out</span><h3>Your first microcontroller</h3><p>Make sense of bits, memory, and peripherals before getting lost in a board-specific tutorial.</p></div>
+        <div class="landing-card"><span class="card-kicker">02 / Going underneath</span><h3>Beyond the library call</h3><p>Already blinking LEDs? Discover what the registers and hardware are doing behind the API.</p></div>
+        <div class="landing-card"><span class="card-kicker">03 / Coming back</span><h3>A clearer refresher</h3><p>Revisit interrupts, timers, and serial buses with a visual reference you can dip into.</p></div>
+      </div>
+      <p class="landing-footnote">Basic programming knowledge helps. A little C will make the examples easier to follow; you don't need a development board to explore the guide.</p>
+    </section>
+
+    <section class="landing-section" aria-labelledby="path-heading">
+      <div class="eyebrow">What you'll learn</div>
+      <h2 id="path-heading">From a single bit to a system that responds.</h2>
+      <div class="learning-stages">
+        <div><span class="card-kicker">01 / Foundations</span><h3>Read the bits</h3><p>Numbers, masks, and registers: the vocabulary of firmware.</p></div>
+        <div><span class="card-kicker">02 / The machine</span><h3>Meet the chip</h3><p>Memory, startup, and clocks: how your code gets a place to run.</p></div>
+        <div><span class="card-kicker">03 / The outside world</span><h3>Make it respond</h3><p>Pins, interrupts, timers, and buses: the bridge from software to signals.</p></div>
+        <div><span class="card-kicker">04 / Going deeper</span><h3>Work with constraints</h3><p>Analog inputs, power, and volatile: the details that make firmware different.</p></div>
+      </div>
+    </section>
+
+    <section class="landing-section landing-start" aria-labelledby="start-heading">
+      <div><div class="eyebrow">Learn at your own pace</div><h2 id="start-heading">One concept. One experiment. One step closer.</h2><p>Start with the foundations, then use the chapter navigation to explore. This is a conceptual guide, not a replacement for your chip's datasheet.</p></div>
+      <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Open chapter 01 <span aria-hidden="true">→</span></a>
+    </section>
   </main>
 </div>
 

@@ -21,6 +21,12 @@ make dev          # watch/rebuild with optional Air, otherwise same as make run
 Air rebuilds HTML/assets and restarts the preview server, not the browser.
 Override `PORT=8081` if needed. The preview server never renders templates.
 
+The homepage introduces the guide's purpose, audience, and learning path.
+Overview and chapter pages share chapter navigation: a sticky left sidebar on
+desktop and a collapsible menu on smaller screens. Chapter links load ordinary
+static pages, with the current page highlighted—no SPA or JavaScript routing.
+Navigation remains available without JavaScript.
+
 ## Build and deploy
 
 ```bash
@@ -46,8 +52,9 @@ not the output directory structure. Rebuild when the deployment prefix changes.
 The same prefix must be supplied to the local preview command.
 
 The Go generator uses embedded templates/assets but does not produce a deployed
-executable. Typography uses system sans-serif and monospace fonts with no external
-font requests; the Alpine runtime and application scripts are copied locally.
+executable. Typography uses IBM Plex Sans and IBM Plex Mono, loaded from Google
+Fonts with local system fallbacks. The Alpine runtime and application scripts are
+copied locally.
 
 ### Output safety
 

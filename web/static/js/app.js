@@ -28,7 +28,20 @@
       },
       { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
     );
-    sections.forEach((s) => io.observe(s));
+    sections.forEach((s) => {
+      io.observe(s);
+      s.classList.add("reveal-ready");
+    });
+  }
+
+  // Native details keeps chapter navigation usable even without JavaScript.
+  function initChapterMenu() {
+    const menu = document.querySelector(".chapter-menu");
+    if (!menu) return;
+    const desktop = window.matchMedia("(min-width: 1080px)");
+    function syncMenu() { menu.open = desktop.matches; }
+    syncMenu();
+    desktop.addEventListener("change", syncMenu);
   }
 
   // Reading-progress bar in the top bar reflects scroll position.
@@ -57,10 +70,12 @@
   }
 
   if (document.readyState !== "loading") {
+    initChapterMenu();
     initReveal();
     initProgress();
   } else {
     document.addEventListener("DOMContentLoaded", function () {
+      initChapterMenu();
       initReveal();
       initProgress();
     });
