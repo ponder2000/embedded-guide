@@ -67,15 +67,7 @@
     <section class="landing-section" aria-labelledby="why-heading">
       <div class="eyebrow">Why this guide exists</div>
       <h2 id="why-heading">Less memorising. More <em>“oh, that's how it works.”</em></h2>
-      <p>Datasheets tell you what a register does. Tutorials tell you what to type. The missing piece is often the picture in between: how a bit becomes a voltage, why a clock matters, or what the CPU actually does when an interrupt arrives.</p>
-      <p>This guide is here to build that picture. Each chapter takes one idea, makes it visible, and connects it to the next.</p>
-      <div class="signal-path" aria-label="From code through a register to a physical pin">
-        <div><span class="signal-label">You write</span><code>GPIO → bit 5</code></div>
-        <span class="signal-arrow" aria-hidden="true">→</span>
-        <div><span class="signal-label">Hardware changes</span><span class="signal-bits">0010 0000</span></div>
-        <span class="signal-arrow" aria-hidden="true">→</span>
-        <div><span class="signal-label">The world responds</span><span class="signal-output"><span class="signal-led" aria-hidden="true"></span> An LED lights up</span></div>
-      </div>
+      <p>Tutorials tell you what to type. Datasheets tell you what a register does. This guide connects the two: see how bits become voltages, clocks drive peripherals, and interrupts bring a chip to life.</p>
     </section>
 
     <section class="landing-section" aria-labelledby="audience-heading">
@@ -92,17 +84,7 @@
     <section class="landing-section" aria-labelledby="path-heading">
       <div class="eyebrow">What you'll learn</div>
       <h2 id="path-heading">From a single bit to a system that responds.</h2>
-      <div class="learning-stages">
-        <div><span class="card-kicker">01 / Foundations</span><h3>Read the bits</h3><p>Numbers, masks, and registers: the vocabulary of firmware.</p></div>
-        <div><span class="card-kicker">02 / The machine</span><h3>Meet the chip</h3><p>Memory, startup, and clocks: how your code gets a place to run.</p></div>
-        <div><span class="card-kicker">03 / The outside world</span><h3>Make it respond</h3><p>Pins, interrupts, timers, and buses: the bridge from software to signals.</p></div>
-        <div><span class="card-kicker">04 / Going deeper</span><h3>Work with constraints</h3><p>Analog inputs, power, and volatile: the details that make firmware different.</p></div>
-      </div>
-    </section>
-
-    <section class="landing-section landing-start" aria-labelledby="start-heading">
-      <div><div class="eyebrow">Learn at your own pace</div><h2 id="start-heading">One concept. One experiment. One step closer.</h2><p>Start with the foundations, then use the chapter navigation to explore. This is a conceptual guide, not a replacement for your chip's datasheet.</p></div>
-      <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Open chapter 01 <span aria-hidden="true">→</span></a>
+      <p>Bits → registers → memory and clocks → pins, interrupts, and buses → analog inputs and low power. Start anywhere on the learning map above. This is a visual companion to your chip's datasheet, not a replacement.</p>
     </section>
   </main>
 </div>

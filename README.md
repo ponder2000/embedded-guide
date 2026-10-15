@@ -23,9 +23,55 @@ Override `PORT=8081` if needed. The preview server never renders templates.
 
 The homepage introduces the guide's purpose, audience, and learning path.
 Overview and chapter pages share chapter navigation: a sticky left sidebar on
-desktop and a collapsible menu on smaller screens. Chapter links load ordinary
+desktop and a slide-out drawer with focus trapping, Escape/backdrop dismissal,
+and scroll locking on smaller screens. Chapter links load ordinary
 static pages, with the current page highlighted—no SPA or JavaScript routing.
 Navigation remains available without JavaScript.
+
+## Browser features
+
+- **Settings:** System / Light / Dark appearance, optional interface sounds (off
+  by default), and a reading-tracking toggle. Native form controls and diagrams
+  follow the selected theme, including animated Alpine states.
+- **Progress:** the learning map and sidebar distinguish unread, in-progress, and
+  read chapters. Section pips show which sections are read. A section is marked
+  read after at least three seconds in view and reaching its end; each section
+  also has an explicit read/unread button. Marking a section unread keeps it
+  unread for the rest of that page visit. Pausing tracking retains existing data.
+- **Storage:** IndexedDB database `embedded-visual-guide`, store `state`, holds
+  `preferences` and `progress/<chapter-slug>` records. Data stays on this browser
+  origin, not a server; clearing site storage removes it. Tabs synchronize via
+  BroadcastChannel. A localStorage theme cache is used only before first paint.
+  If storage is blocked, controls still work in memory and Settings shows a warning.
+- **Reset:** Settings → Reset reading progress, or **Ctrl+Shift+R** (also
+  **⌘+Shift+R**), clears reading records while keeping theme, tracking, and sound
+  preferences. The shortcut reloads after clearing. Browser-reserved shortcuts
+  may not reach the page, so the reset button is the reliable alternative.
+- **Sound:** synthesized Web Audio tones for controls, throttled scroll/slider
+  feedback, and correct/incorrect answers. Audio requires opt-in and a gesture.
+  No audio files, network requests, or autoplay audio. Components can dispatch
+  `guide:feedback` with `{ type: "correct" }` or `{ type: "incorrect" }` as detail.
+- **Simulations:** UART, clock signals, PWM, boot, and interrupts have Play/Pause,
+  Step, Reset, and playback-speed controls. They start paused, retain their
+  position when paused, and pause when their tab is hidden. Timings are slowed
+  educational models, not hardware emulation. Ambient motion respects the OS
+  reduced-motion setting; simulations only animate after an explicit action.
+
+### Optional browser regression tests
+
+Go remains the only build requirement. To run the additional Playwright checks:
+
+```bash
+npm install --no-save --package-lock=false playwright
+npx playwright install --no-shell chromium
+make run                 # leave running in another terminal
+SITE_URL=http://localhost:8080 node scripts/browser-test.cjs
+```
+
+The checks exercise mobile drawer/focus, themes, persisted preferences and
+progress, reset controls/shortcut, storage-denied and no-JS fallbacks, simulation
+pause/step/reset, and every chapter at phone, tablet, and desktop widths. Set
+`SCREENSHOT_DIR` to an existing directory to save visual snapshots.
 
 ## Build and deploy
 

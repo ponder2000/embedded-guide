@@ -54,7 +54,7 @@
   <p class="subhead">On a Cortex-M, every interrupt funnels through one piece of hardware: the NVIC, the Nested Vectored Interrupt Controller. It tracks which interrupts are pending, decides which one wins when several arrive, and lets a more urgent interrupt preempt one already running — that's the "nested" part.</p>
   <p>Two ideas do the heavy lifting. The <em>vector table</em> is a fixed array at the start of flash: slot N holds the address of the handler for IRQ N. When IRQ N fires, the hardware reads slot N and jumps there — no <code>if/else</code> dispatch, the lookup is wired in. And each interrupt has a <em>priority</em> number, where lower means more urgent. A priority-1 timer can interrupt a priority-3 UART handler mid-flight; the UART resumes once the timer's handler returns.</p>
 
-  <div class="interactive"
+  <div class="interactive" data-simulation="steps" data-simulation-name="Interrupt handling"
        x-data="{
          step: 0,
          steps: [

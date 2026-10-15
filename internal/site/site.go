@@ -68,9 +68,9 @@ func Generate(base string) (map[string][]byte, error) {
 		return nil
 	}
 	if err := page("index.html", "home.html", struct {
-		Parts       []content.Part
-		ChapterNum  int
-		CurrentSlug string
+		Parts         []content.Part
+		ChapterNum    int
+		CurrentSlug   string
 		SectionCounts map[string]int
 	}{content.Parts(), len(content.Chapters), "", sectionCounts}); err != nil {
 		return nil, err

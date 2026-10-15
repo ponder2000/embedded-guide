@@ -6,6 +6,7 @@
   const defaults = { theme: "system", sound: false, tracking: true };
   let preferences = { ...defaults }, progress = {}, db = null, audio = null;
   let storageReady = false, channel = null, lastSound = 0, resetUntil = 0;
+  let pendingSaves = 0;
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   const systemTheme = matchMedia("(prefers-color-scheme: dark)");
   const article = $("article[data-chapter]");
@@ -27,12 +28,15 @@
   function openDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open("embedded-visual-guide", 1);
-      const timer = setTimeout(() => reject(new Error("Storage timeout")), 1800);
+      let finished = false;
+      const timer = setTimeout(() => { finished = true; reject(new Error("Storage timeout")); }, 1800);
       request.onupgradeneeded = () => request.result.createObjectStore("state", { keyPath: "key" });
-      request.onerror = () => { clearTimeout(timer); reject(request.error); };
-      request.onblocked = () => { clearTimeout(timer); reject(new Error("Storage blocked")); };
+      request.onerror = () => { clearTimeout(timer); finished = true; reject(request.error); };
+      request.onblocked = () => { clearTimeout(timer); finished = true; reject(new Error("Storage blocked")); };
       request.onsuccess = () => {
         clearTimeout(timer);
+        if (finished) { request.result.close(); return; }
+        finished = true;
         resolve(request.result);
       };
     });
@@ -47,12 +51,19 @@
   }
   function persist(key, value) {
     if (!db) return Promise.resolve();
+    pendingSaves++;
+    document.documentElement.dataset.saving = "true";
+    renderProgress();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("state", "readwrite");
       tx.objectStore("state").put({ key, value });
       tx.oncomplete = resolve;
       tx.onabort = tx.onerror = () => reject(tx.error);
-    }).catch(() => { storageFailure(); });
+    }).catch(() => { storageFailure(); }).finally(() => {
+      pendingSaves--;
+      document.documentElement.dataset.saving = String(pendingSaves > 0);
+      renderProgress();
+    });
   }
   function broadcast(data) { if (channel) channel.postMessage(data); }
   function validPreferences(value) {
@@ -168,7 +179,11 @@
       if (status) { status.textContent = state === "read" ? "✓" : state === "partial" ? "◐" : "○"; status.setAttribute("aria-label", label); }
       const text = $(".index-section-progress", link);
       if (text) text.textContent = `${read.size} / ${total} sections read · ${label}`;
-      $$("[data-section-pip]", link).forEach(pip => pip.classList.toggle("read", read.has(Number(pip.dataset.sectionPip))));
+      $$("[data-section-pip]", link).forEach(pip => {
+        const done = read.has(Number(pip.dataset.sectionPip));
+        pip.classList.toggle("read", done);
+        pip.title = `Section ${pip.dataset.sectionPip}: ${done ? "read" : "not read"}`;
+      });
     });
     const overall = $(".overall-progress");
     if (overall) overall.textContent = `${complete} / ${seen.size} chapters read${preferences.tracking ? "" : " · tracking paused"}`;
@@ -177,10 +192,10 @@
       sections.forEach((section, i) => {
         const button = $(".section-read-toggle", section), done = read.has(i + 1);
         section.classList.toggle("section-read", done);
-        if (button) { button.textContent = done ? "✓ Read · mark unread" : "○ Mark section read"; button.setAttribute("aria-pressed", String(done)); button.disabled = !preferences.tracking; }
+        if (button) { button.textContent = done ? "✓ Read · mark unread" : "○ Mark section read"; button.setAttribute("aria-pressed", String(done)); button.disabled = !storageReady || !preferences.tracking; }
       });
       const summary = $("[data-reading-summary]");
-      if (summary) summary.textContent = preferences.tracking ? `${read.size} / ${sections.length} sections read · saved on this browser` : "Reading tracking is paused in Settings.";
+      if (summary) summary.textContent = preferences.tracking ? `${read.size} / ${sections.length} sections read · ${pendingSaves ? "saving…" : db ? "saved on this browser" : "this page only"}` : "Reading tracking is paused in Settings.";
     }
   }
   async function markSection(number, done, audible = false) {
@@ -225,7 +240,7 @@
     // The synchronous marker survives even if the browser handles its reload
     // shortcut before an asynchronous IndexedDB transaction has completed.
     try { sessionStorage.setItem("embedded-guide-reset", "1"); } catch (_) {}
-    progress = {}; dwell.clear(); resetUntil = Date.now() + 5000;
+    progress = {}; dwell.clear(); manuallyUnread.clear(); resetUntil = Date.now() + 5000;
     renderProgress();
     if (db) {
       try {
@@ -254,6 +269,7 @@
   }
   function initInteractions() {
     document.addEventListener("pointerdown", unlockAudio, { passive: true });
+    document.addEventListener("input", e => { if (e.target.matches('input[type="range"]')) sound("scroll"); });
     document.addEventListener("keydown", unlockAudio);
     document.addEventListener("click", e => {
       if (e.target.closest("a, button, summary, select, .bit") && !e.target.closest("[data-answer]")) sound("click");
@@ -312,15 +328,19 @@
       if (reset) await resetProgress();
     } catch (_) { db = null; storageFailure(); }
     storageReady = true;
+    $$(".preferences-panel input, .preferences-panel select, #reset-progress").forEach(el => { el.disabled = false; });
+    document.documentElement.dataset.storageReady = "true";
+    document.documentElement.dataset.saving = "false";
     applyPreferences();
     if ("BroadcastChannel" in window) {
       channel = new BroadcastChannel("embedded-guide-state");
       channel.onmessage = e => {
         if (e.data.type === "preferences") { preferences = validPreferences(e.data.value); applyPreferences(); }
         if (e.data.type === "progress" && typeof e.data.slug === "string" && Array.isArray(e.data.value)) { progress[e.data.slug] = e.data.value.filter(Number.isInteger); renderProgress(); }
-        if (e.data.type === "reset") { progress = {}; dwell.clear(); resetUntil = Date.now() + 5000; renderProgress(); }
+        if (e.data.type === "reset") { progress = {}; dwell.clear(); manuallyUnread.clear(); resetUntil = Date.now() + 5000; renderProgress(); }
       };
     }
   }
+  $$(".preferences-panel input, .preferences-panel select, #reset-progress").forEach(el => { el.disabled = true; });
   initDrawer(); initReading(); initMotion(); initInteractions(); initStorage();
 })();

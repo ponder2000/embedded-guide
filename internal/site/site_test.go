@@ -135,6 +135,11 @@ func TestGuideLayout(t *testing.T) {
 				t.Errorf("home missing introduction: %s", marker)
 			}
 		}
+		for _, marker := range []string{`class="circuit-board"`, `class="chapter-index"`, `data-answer="correct"`, `class="overall-progress"`} {
+			if !strings.Contains(home, marker) {
+				t.Errorf("home missing interactive feature %s", marker)
+			}
+		}
 		if strings.Contains(home, `class="toc-list"`) {
 			t.Error("home still renders the old chapter-list landing page")
 		}
@@ -163,6 +168,17 @@ func TestGuideLayout(t *testing.T) {
 				if !strings.Contains(body, `href="`+base+"/chapter/"+chapter.Slug+`/"`) {
 					t.Errorf("%s missing sidebar chapter %s", name, chapter.Slug)
 				}
+			}
+			for _, marker := range []string{`id="guide-sidebar"`, `aria-controls="guide-sidebar"`, `id="theme-choice"`, `id="sound-choice"`, `id="tracking-choice"`, `id="reset-progress"`, `/static/css/experience.css`, `/static/favicon.svg`} {
+				if !strings.Contains(body, marker) {
+					t.Errorf("%s missing experience feature %s", name, marker)
+				}
+			}
+		}
+		for _, slug := range []string{"boot-sequence", "clocks", "interrupts", "timers-pwm", "uart"} {
+			body := string(files["chapter/"+slug+"/index.html"])
+			if !strings.Contains(body, `data-simulation=`) || !strings.Contains(body, `/static/js/simulations.js`) {
+				t.Errorf("%s missing simulation player", slug)
 			}
 		}
 	}
