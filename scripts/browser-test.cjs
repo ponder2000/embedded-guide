@@ -115,6 +115,10 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
       for (const slug of slugs) {
         await page.goto(base + "/chapter/" + slug + "/"); await ready();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${slug} overflows at ${width}px`);
+        assert.match(await page.locator(".chapter-learning-time").textContent(), /Estimated learning time: ~\d+ min/);
+        assert.equal(await page.locator(".sidebar-duration").count(), chapterTotal, "Every sidebar chapter needs a learning estimate");
+        assert.equal(await page.locator('footer a[href="https://x.com/chotathanos"]').count(), 1, "Every chapter should include Jay's shared footer link");
+        assert.equal(await page.locator(".chapter-checkpoint details").count(), 1, "Every chapter needs a review explanation");
         if (["boot-sequence", "interrupts", "timers-pwm"].includes(slug)) {
           await page.locator(".sim-step").click();
           assert.ok((await page.locator(".simulation-readout").textContent()).length > 0);
@@ -145,6 +149,28 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
           await page.getByRole("button", { name: "Restart loop", exact: true }).click();
           assert.match(await page.locator("#bare-metal-step").textContent(), /Step 1/);
         }
+        if (width === 360 && slug === "debouncing") {
+          const next = page.getByRole("button", { name: "Next sample", exact: true });
+          const status = page.locator('.interactive [role="status"]');
+          for (let sample = 1; sample <= 16; sample++) {
+            await next.click();
+            if (sample === 8) assert.match(await status.textContent(), /Accepted released · Press events 0/);
+            if (sample === 9) assert.match(await status.textContent(), /Accepted pressed · Press events 1/);
+          }
+          assert.match(await status.textContent(), /Accepted released · Press events 1/);
+          assert.equal(await next.isDisabled(), true);
+          await page.getByRole("button", { name: "Reset samples", exact: true }).click();
+          assert.match(await status.textContent(), /Sample 0 \/ 16/);
+          assert.equal(await next.isDisabled(), false);
+        }
+        if (width === 360 && slug === "glossary") {
+          await page.locator('.glossary-jumps a[href="#atomicity"]').click();
+          assert.ok(page.url().endsWith("#atomicity"));
+          assert.ok(await page.locator("#atomicity").isVisible());
+          const review = page.locator(".chapter-checkpoint details");
+          await review.locator("summary").click();
+          assert.equal(await review.getAttribute("open"), "");
+        }
       }
     }
     assert.deepEqual(errors, [], "No browser/Alpine errors expected");
@@ -173,6 +199,10 @@ const base = (process.env.SITE_URL || "http://localhost:8097").replace(/\/$/, ""
     const staticPage = await noJS.newPage(); await staticPage.goto(base + "/chapter/uart/");
     assert.equal(await staticPage.locator(".sidebar-link").count(), chapterTotal);
     assert.equal(await staticPage.locator("article section").first().evaluate(el => getComputedStyle(el).opacity), "1");
+    await staticPage.locator(".chapter-checkpoint summary").click();
+    assert.equal(await staticPage.locator(".chapter-checkpoint details").getAttribute("open"), "", "Review explanations should work without JavaScript");
+    await staticPage.goto(base + "/chapter/debouncing/");
+    assert.match(await staticPage.locator("noscript").textContent(), /exactly one accepted press/);
     await noJS.close();
     console.log("Browser checks passed: drawer, themes, IndexedDB, progress, sound preference, feedback, playback, all chapters at 360/768/1440px.");
     await context.close();

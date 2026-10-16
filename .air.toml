@@ -4,7 +4,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go run ./cmd/build -out \"${OUT:-dist}\" -base-path \"${BASE_PATH:-}\" && go build -o ./tmp/server ./cmd/server"
+  cmd = "go run ./cmd/build -out \"${OUT:-dist}\" -base-path \"${BASE_PATH:-}\" -site-url \"${SITE_URL:-}\" -visitor-badge=${VISITOR_BADGE:-false} && go build -o ./tmp/server ./cmd/server"
   bin = "./tmp/server"
   full_bin = "./tmp/server -dir \"${OUT:-dist}\" -base-path \"${BASE_PATH:-}\" -addr \":${PORT:-8080}\""
   # Rebuild on Go changes and on template/asset edits (assets are embedded).

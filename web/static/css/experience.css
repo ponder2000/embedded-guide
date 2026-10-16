@@ -76,6 +76,27 @@ code { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 /* Compact controls remain reachable on a narrow phone. */
 .topbar-inner { gap: 8px; }
 .topbar-actions { display: flex; align-items: center; gap: 12px; }
+.visitor-badge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 5px 7px; border: 1px solid var(--rule); border-radius: 5px; background: var(--paper); color: var(--ink-soft); }
+.visitor-badge img { display: block; width: auto; max-width: 130px; border-radius: 2px; }
+.visitor-badge-fallback { font: 10px var(--font-mono); }
+.chapter-summary { color: var(--ink-soft); max-width: 65ch; margin-bottom: 20px; }
+.chapter-learning-time { font-size: 12px; color: var(--ink-soft); margin-bottom: 20px; }
+.sidebar-duration { display: block; font-size: 10px; font-weight: 400; color: var(--ink-soft); }
+.chapter-checkpoint { margin-block: 32px; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--paper); }
+.chapter-checkpoint h2 { margin-block: 8px 16px; }
+.chapter-checkpoint p { margin-block: 14px; }
+.chapter-checkpoint summary { cursor: pointer; color: var(--accent); padding-block: 10px; }
+.checkpoint-note { font-size: 12px; color: var(--ink-soft); }
+.glossary dt { font-weight: 600; margin-top: 24px; scroll-margin-top: 120px; }
+.glossary dd { margin: 6px 0 18px; color: var(--ink-soft); }
+.glossary-jumps { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-block: 20px; }
+.footer-social { display: block; width: fit-content; margin: 12px auto 0; color: var(--accent); font-size: 12px; letter-spacing: normal; text-transform: none; }
+@media (max-width: 600px) {
+  .topbar-inner { flex-wrap: wrap; }
+  .topbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .topbar-meta { display: none; }
+  .visitor-badge { margin-left: auto; }
+}
 .toolbar-button { font: 500 12px/1.4 var(--font-sans); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; border-radius: 4px; list-style: none; }
 .toolbar-button::-webkit-details-marker { display: none; }
 .toolbar-button:hover { background: var(--highlight); }

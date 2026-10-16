@@ -6,39 +6,39 @@
   <p class="subhead">A microcontroller that runs flat-out all day is a battery's worst enemy. The whole craft of low-power design is knowing how little of the chip you can keep awake — and for how long — while still waking the instant something happens. Each deeper mode trades wake-up speed and retained state for a smaller current draw.</p>
 
   <div class="diagram-wrap">
-    <svg viewBox="0 0 620 320" role="img" aria-label="Current consumption stair-step across Run, Sleep, Stop and Standby modes, falling from milliamps to nanoamps">
+    <svg viewBox="0 0 620 320" role="img" aria-label="Qualitative power-mode comparison: deeper sleep often reduces current but sacrifices retained state; not device specifications">
       <!-- baseline -->
       <line x1="60" y1="250" x2="600" y2="250" stroke="#1A1814" stroke-width="1.5"/>
       <text x="60" y="278" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">deeper sleep  &#8594;  less current, slower wake-up, less stays alive</text>
 
       <!-- y axis label -->
-      <text x="22" y="150" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" transform="rotate(-90 22 150)" letter-spacing="0.12em">CURRENT DRAW (log)</text>
+      <text x="22" y="150" font-family="IBM Plex Mono, monospace" font-size="10" fill="#B8521E" transform="rotate(-90 22 150)" letter-spacing="0.12em">CURRENT (illustrative)</text>
 
       <!-- RUN bar -->
       <rect x="80" y="50" width="110" height="200" fill="#B8521E" stroke="#1A1814" stroke-width="1.4"/>
       <text x="135" y="42" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">RUN</text>
-      <text x="135" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#fff">~ mA</text>
+      <text x="135" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#fff">active</text>
       <text x="135" y="92" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">CPU + flash</text>
       <text x="135" y="105" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#FBF8F2">+ everything</text>
 
       <!-- SLEEP bar -->
       <rect x="210" y="120" width="110" height="130" fill="#E8A47C" stroke="#1A1814" stroke-width="1.4"/>
       <text x="265" y="112" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">SLEEP</text>
-      <text x="265" y="148" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">~ 100s &#181;A</text>
+      <text x="265" y="148" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">CPU paused</text>
       <text x="265" y="168" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">CPU clock off,</text>
       <text x="265" y="181" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">peripherals live</text>
 
       <!-- STOP bar -->
       <rect x="340" y="185" width="110" height="65" fill="#FFD89C" stroke="#1A1814" stroke-width="1.4"/>
       <text x="395" y="177" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">STOP</text>
-      <text x="395" y="208" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">~ &#181;A</text>
+      <text x="395" y="208" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#1A1814">deep sleep</text>
       <text x="395" y="226" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">clocks off,</text>
       <text x="395" y="239" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#1A1814">RAM retained</text>
 
       <!-- STANDBY bar -->
       <rect x="470" y="234" width="110" height="16" fill="#5C8A4E" stroke="#1A1814" stroke-width="1.4"/>
       <text x="525" y="226" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#1A1814">STANDBY</text>
-      <text x="525" y="300" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#5C8A4E">~ nA</text>
+      <text x="525" y="300" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="#5C8A4E">check datasheet</text>
       <text x="525" y="216" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="#4A4339">almost all off &#183; RAM lost</text>
 
       <!-- WFI callout -->
@@ -50,7 +50,7 @@
   <p><code>WFI</code> means "Wait For Interrupt," but it does not select a low-power mode by itself. Firmware first configures the power mode and valid wake sources. On the STM32F1/F4 examples, Sleep and Stop retain execution context; Stop may require restoring clocks after wake. Standby loses normal execution context and wakes through reset/startup rather than continuing after WFI. A sensor node can spend most of its life asleep, but retained state, wake behavior, and current figures must come from its exact datasheet.</p>
 
   <div class="takeaway">
-    <strong>The dial you're turning:</strong> deeper modes power down more of the silicon, so current falls from milliamps to nanoamps — but you give up retained state (RAM may be wiped) and pay a longer wake-up latency. Choosing a mode is choosing how patient your application can afford to be.
+    <strong>The dial you're turning:</strong> deeper modes typically power down more silicon, trading retained state and wake-up latency for lower current. There is no universal current value for Sleep, Stop, or Standby. Use the exact datasheet's voltage, temperature, and enabled-peripheral conditions; a board's regulator, LEDs, and debugger can dominate the current you measure at USB.
   </div>
 </section>
 

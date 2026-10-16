@@ -1,0 +1,41 @@
+{{- define "chapter-watchdogs" -}}
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A deadline for <em>making progress</em></h2>
+  <p class="subhead">A watchdog is a timer that requests recovery—usually a reset—unless firmware refreshes it according to its rules. It can help recover from a deadlock or runaway loop. It cannot prove that the application is correct.</p>
+  <p>Begin with <a href="{{ url "/chapter/boot-sequence/" }}">startup</a>, <a href="{{ url "/chapter/clocks/" }}">clocks</a>, and your <a href="{{ url "/chapter/first-project/" }}">first board project</a>. Recovery is a complete path: detect a failure, reset, establish safe outputs, inspect the cause, and decide whether normal operation should resume.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 170" role="img" aria-label="Healthy work refreshes a watchdog; stalled work misses its deadline and leads to reset and safe startup">
+      <g fill="var(--paper)" stroke="var(--ink)"><rect x="10" y="30" width="180" height="70"/><rect x="230" y="30" width="180" height="70"/><rect x="450" y="30" width="180" height="70"/></g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="14"><text x="100" y="60">Critical work</text><text x="100" y="81">reports progress</text><text x="320" y="60">Supervisor checks</text><text x="320" y="81">refresh if healthy</text><text x="540" y="60">Missed deadline?</text><text x="540" y="81">reset → safe boot</text></g>
+      <path d="M190 65H230M410 65H450" stroke="var(--accent)" stroke-width="3"/><text x="320" y="145" text-anchor="middle" fill="var(--accent)" font-size="13">Refresh is earned by useful work—not by a timer interrupt.</text>
+    </svg>
+  </div>
+  <p>For STM32F401, an independent watchdog and a window watchdog have different clocks and constraints. Read the exact reference manual and errata rather than transferring settings from another STM32 family.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Feed only after <em>evidence</em></h2>
+  <p>An unconditional refresh inside a periodic ISR can hide a dead main loop. Instead, define the useful work that must complete: for example, the sensor pipeline advances and the control calculation finishes with valid inputs. A supervisor checks fresh evidence for each required activity in the current health window, then refreshes only if all required conditions hold.</p>
+  <p>Clear or advance the evidence for the next window so an old success cannot authorize refresh forever. Use sequence counters, timestamps, or bounded acknowledgements with appropriate synchronization. A flag that never gets cleared is not continuing proof of health. Do not require an event-driven task to produce an event when none was expected: define what healthy idleness means.</p>
+  <div class="takeaway"><strong>Choose a meaningful deadline:</strong> it must tolerate legitimate worst-case startup and execution delays yet recover before the system's maximum acceptable failure time. A 100 ms heartbeat does not automatically justify a 100 ms watchdog timeout.</div>
+  <p>If the watchdog clock varies with voltage or temperature, calculate both the shortest and longest possible timeout from the documented bounds. A window watchdog can reject an early refresh as well as a late one. Check whether sleep, debug halt, and reset change its behavior.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Reset is not <em>automatically safe</em></h2>
+  <p>On startup, establish safe outputs before enabling actuators or resuming external communication. Some pin states are determined by reset defaults and external components before firmware runs. If failure could injure someone or damage equipment, a software watchdog is not a substitute for an engineered hardware safety mechanism.</p>
+  <ul><li>Capture reset-cause flags early, before code clears them; distinguish watchdog, power, and software reset where the MCU supports it.</li><li>Ensure settings and persistent records tolerate interruption. A reset in the middle of a flash write can leave incomplete data.</li><li>Plan for repeated resets: safe mode, bounded retries, or a latched fault may be better than an endless reboot loop.</li><li>Avoid writing flash on every boot or refresh; account for endurance and power-failure behavior.</li></ul>
+  <p>Some watchdogs cannot be stopped after being enabled until reset; option bytes can also enable them automatically. Read the programming and recovery procedure before changing those settings. This lesson intentionally gives no portable register-enable sequence.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Prove the <em>failure path</em></h2>
+  <p>Use a safe bench setup with actuators disconnected. Inject a stall in foreground work while interrupts still run: a properly supervised refresh should stop and recovery should occur. Then omit a required health acknowledgement and verify the same outcome. Confirm reset cause, boot behavior, and safe output states after each test.</p>
+  <p>Also run legitimate long operations and startup sequences to check for false resets. Repeat the tests without a debugger; debug freeze settings can completely change watchdog behavior. Measure the observed failure-to-recovery interval rather than assuming the configured nominal timeout is the entire recovery time.</p>
+  <p><strong>Official reference:</strong> the <a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f401re.html">STM32F401RE documentation</a> includes RM0368, its datasheet, and errata. Consult watchdog, reset/clock control, power, and debug-freeze sections together.</p>
+</section>
+{{- end -}}

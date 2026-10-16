@@ -4,17 +4,36 @@
        {{block}} across many parsed files. */ -}}
 
 {{- define "head" -}}
-<!-- dot (.) is the page title string -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="A chapter-wise, animated visual guide to learning embedded systems — from bits to a blinking chip.">
+<meta name="description" content="{{ .Description }}">
+{{ if .NoIndex }}<meta name="robots" content="noindex, follow">{{ end }}
+<meta name="author" content="Jay">
+<meta property="og:site_name" content="Embedded Systems · A Visual Guide">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ .Title }}">
+<meta property="og:description" content="{{ .Description }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ .Title }}">
+<meta name="twitter:description" content="{{ .Description }}">
+{{ if .Canonical }}
+<link rel="canonical" href="{{ .Canonical }}">
+<meta property="og:url" content="{{ .Canonical }}">
+<meta property="og:image" content="{{ .Image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Embedded Systems: a visual guide from bits to a blinking chip">
+<meta name="twitter:image" content="{{ .Image }}">
+<meta name="twitter:image:alt" content="Embedded Systems: a visual guide from bits to a blinking chip">
+<script type="application/ld+json">{{ .StructuredData }}</script>
+{{ end }}
 <meta name="color-scheme" content="light dark">
 <script>
 // Only a paint-time cache; IndexedDB is the source of truth after startup.
 try { var t = localStorage.getItem('embedded-guide-theme'); document.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (_) { document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
 document.documentElement.classList.add('js');
 </script>
-<title>{{ . }}</title>
+<title>{{ .Title }}</title>
 <link rel="icon" href="{{ url "/static/favicon.svg" }}" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,14 +42,21 @@ document.documentElement.classList.add('js');
 <link rel="stylesheet" href="{{ url "/static/css/experience.css" }}">
 {{- end -}}
 
-{{- /* topbar: dot (.) is a meta string shown on the right ("" hides it).
+{{- /* topbar: dot (.) is the page metadata.
        The progress bar only fills on pages that include app.js progress. */ -}}
 {{- define "topbar" -}}
 <div class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="{{ url "/" }}">EMBEDDED<span class="dot">.</span>GUIDE</a>
     <div class="topbar-actions">
-      {{- if . }}<span class="topbar-meta">{{ . }}</span>{{ end }}
+      {{- if .Topbar }}<span class="topbar-meta">{{ .Topbar }}</span>{{ end }}
+      {{ if .BadgeURL }}
+      <span class="visitor-badge" title="Approximate site visits, not unique visitors. This image contacts hits.sh; caching and blockers affect the count.">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <img src="{{ .BadgeURL }}" alt="Site visits (approximate; counter provided by hits.sh)" height="20" referrerpolicy="no-referrer">
+        <span class="visitor-badge-fallback" hidden>Visits unavailable</span>
+      </span>
+      {{ end }}
       <button class="toolbar-button drawer-trigger" type="button" aria-controls="guide-sidebar" aria-expanded="false" hidden>☰ <span>Chapters</span></button>
       <details class="preferences">
         <summary class="toolbar-button">Settings</summary>
@@ -42,6 +68,7 @@ document.documentElement.classList.add('js');
           <button class="toolbar-button" type="button" id="reset-progress">Reset reading progress</button>
           <p>Ctrl / ⌘ + Shift + R resets progress and reloads. Theme and sound settings stay.</p>
           <p id="storage-status" role="status">Saved on this browser. No account needed.</p>
+          {{ if .BadgeURL }}<p>The visits badge loads from <a href="https://hits.sh/privacy/">hits.sh</a>, which receives your IP address. It counts approximate visits, not unique people.</p>{{ end }}
         </div>
       </details>
     </div>
@@ -52,7 +79,8 @@ document.documentElement.classList.add('js');
 
 {{- define "footer" -}}
 <footer>
-  BITS → BLINKING CHIP · A VISUAL GUIDE TO EMBEDDED SYSTEMS
+  <span>BITS → BLINKING CHIP · A VISUAL GUIDE TO EMBEDDED SYSTEMS</span>
+  <a class="footer-social" href="https://x.com/chotathanos" rel="me">Find Jay on X · @chotathanos ↗</a>
 </footer>
 <div class="app-toast" role="status" aria-live="polite" id="app-toast"></div>
 {{- end -}}
@@ -77,7 +105,7 @@ document.documentElement.classList.add('js');
           {{- range .Chapters }}
           <li><a class="sidebar-link" href="{{ url (printf "/chapter/%s/" .Slug) }}"{{ if eq $current .Slug }} aria-current="page"{{ end }} data-chapter-link="{{ .Slug }}" data-sections="{{ index $counts .Slug }}">
             <span class="sidebar-number">{{ printf "%02d" .Num }}</span>
-            <span>{{ safeHTML .Title }}</span>
+            <span>{{ safeHTML .Title }}<span class="sidebar-duration">~{{ .LearningMinutes }} min</span></span>
             <span class="chapter-status" aria-label="Not read">○</span>
           </a></li>
           {{- end }}

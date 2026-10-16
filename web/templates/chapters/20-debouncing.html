@@ -1,0 +1,61 @@
+{{- define "chapter-debouncing" -}}
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>One press. <em>Many edges.</em></h2>
+  <p class="subhead">A mechanical switch is not an ideal digital source. Its contacts can make and break several times before settling. A GPIO interrupt faithfully reports those edges—even when a person intended only one press.</p>
+  <p>Start with the <a href="{{ url "/chapter/gpio/" }}">GPIO lesson</a> and the <a href="{{ url "/chapter/first-project/" }}">first hardware project</a>. Verify your switch's wiring, active level, and pull resistor. Normalize its electrical level to <code>pressed = true</code> before applying a debounce algorithm; pressed does not universally mean low.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 190" role="img" aria-label="Raw switch input changes repeatedly during a press; the accepted state changes only after consecutive stable observations">
+      <g fill="var(--ink)" font-size="13"><text x="15" y="42">Raw input</text><text x="15" y="127">Accepted</text><text x="210" y="175">Observe first → accept after stability</text></g>
+      <g fill="none" stroke-width="3"><path d="M120 65H190V25H220V65H250V25H280V65H310V25H610" stroke="var(--ink-soft)"/><path d="M120 145H410V105H610" stroke="var(--accent)"/></g>
+      <path d="M310 18V153M410 18V153" stroke="var(--rule)" stroke-dasharray="5 5"/>
+    </svg>
+  </div>
+  <p>These are illustrative waveforms, not timing specifications. Bounce duration varies with the switch, age, wiring, and noise. Debouncing does not protect a pin from overvoltage, ESD, or unsafe wiring.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Accept a state, <em>not every sample</em></h2>
+  <p>One simple sampled filter remembers a candidate state and counts consecutive observations of it. Accept that state only when the count reaches a threshold. Generate a press event only on the accepted transition from released to pressed; remaining held must not repeatedly fire the event.</p>
+  <div class="interactive" x-data="{
+    samples: [0,1,0,1,1,0,1,1,1,1,1,0,1,0,0,0], index: 0,
+    raw: 0, candidate: 0, count: 0, stable: 0, presses: 0,
+    step() {
+      if (this.index >= this.samples.length) return;
+      this.raw = this.samples[this.index++];
+      if (this.raw === this.candidate) this.count = Math.min(3, this.count + 1);
+      else { this.candidate = this.raw; this.count = 1; }
+      if (this.count >= 3 &amp;&amp; this.stable !== this.candidate) {
+        this.stable = this.candidate;
+        if (this.stable === 1) this.presses++;
+      }
+    },
+    reset() { this.index = 0; this.raw = 0; this.candidate = 0; this.count = 0; this.stable = 0; this.presses = 0; }
+  }">
+    <div class="interactive-label">Sample explorer · 1 means pressed · three consistent samples required</div>
+    <p>Trace: <code>0 1 0 1 1 0 1 1 1 1 1 0 1 0 0 0</code></p>
+    <div class="hero-actions"><button type="button" class="btn" @click="step()" :disabled="index >= samples.length">Next sample</button><button type="button" class="btn" @click="reset()">Reset samples</button></div>
+    <p role="status" aria-live="polite">Sample <strong x-text="index">0</strong> / 16 · Raw <strong x-text="raw">0</strong> · Stable run <strong x-text="count">0</strong> / 3 · Accepted <strong x-text="stable ? 'pressed' : 'released'">released</strong> · Press events <strong x-text="presses">0</strong></p>
+    <noscript><p>The interactive controls need JavaScript. In the trace above, the press is accepted at sample 9 and release at sample 16: exactly one accepted press.</p></noscript>
+  </div>
+  <p>The initial accepted state here is released. In production, choose an explicit boot policy: read and qualify the initial input, or deliberately require a release before accepting a first press. A button held during reset must not surprise the application.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Keep the loop <em>available</em></h2>
+  <p>With nominal 5 ms sampling and a threshold of three, acceptance occurs roughly 10–15 ms after a change that then remains stable, depending on where the change falls between samples. This is an example, not a universal switch specification. Missed samples and scheduling jitter change the effective timing.</p>
+  <p>Sample once when due from a nonblocking loop, using the <a href="{{ url "/chapter/first-project/" }}">elapsed-time pattern</a>. Do not run a rapid catch-up loop that reads the same level three times and pretends three time-spaced observations occurred. If elapsed stability is your requirement, timestamp the candidate's most recent observed change and accept only after the chosen interval.</p>
+  <p>Do not call a blocking delay inside the GPIO ISR. Instead, record that an edge occurred and defer filtering, or use a periodic sampler. An edge-only design must arrange a later observation even if no further edges arrive. Coordinate ISR/foreground state safely; <code>volatile</code> is not a queue or a lock.</p>
+  <div class="takeaway"><strong>Two different features:</strong> debouncing decides when a state is credible. Long-press, auto-repeat, and double-click recognition interpret already-debounced events with separate state machines.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Test the <em>uncomfortable inputs</em></h2>
+  <ul><li>A steady release and a steady press: no extra events while held.</li><li>A bouncing press and release: one press and one release after qualification.</li><li>A short pulse below the acceptance threshold: no accepted press.</li><li>Reset while held, missed sample deadlines, and a tick counter wrapping around.</li></ul>
+  <p>Use synthetic sample traces to test the filter before touching hardware. Then measure the real switch if you need a justified threshold. An RC network and a suitable Schmitt-trigger input can help, but check the input's electrical requirements and timing; a capacitor alone is not a general safety or noise solution.</p>
+  <p><strong>Hardware reference:</strong> use the <a href="https://www.st.com/en/evaluation-tools/nucleo-f401re.html">NUCLEO-F401RE board documents</a> to verify B1's connection and the <a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f401re.html">device documentation</a> for input specifications.</p>
+</section>
+{{- end -}}

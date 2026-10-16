@@ -62,6 +62,16 @@ its own category. Each category can be expanded independently with mouse or keyb
   position when paused, and pause when their tab is hidden. Timings are slowed
   educational models, not hardware emulation. Ambient motion respects the OS
   reduced-motion setting; simulations only animate after an explicit action.
+- **Chapter reviews:** every lesson ends with a question, a native expandable
+  explanation, and a practice task. These ungraded reviews work without JavaScript
+  and stay outside tracked sections, preserving existing reading progress.
+- **Learning time:** chapter headers and sidebar entries show editorial minute
+  estimates for reading, diagrams, experiments, and self-checks—not a mastery
+  guarantee. Optional hardware work and tool setup are extra. Maintain each
+  chapter's `LearningMinutes` in `internal/content/chapters.go` as content changes.
+- **Quick reference:** the glossary groups 29 anchored definitions with links back
+  to lessons. The button-debouncing explorer lets you step through noisy samples
+  and compare raw levels with accepted press/release states.
 
 ### Optional browser regression tests
 
@@ -78,6 +88,12 @@ The checks exercise mobile drawer/focus, themes, persisted preferences and
 progress, reset controls/shortcut, storage-denied and no-JS fallbacks, simulation
 pause/step/reset, and every chapter at phone, tablet, and desktop widths. Set
 `SCREENSHOT_DIR` to an existing directory to save visual snapshots.
+
+For a production-configured build served locally, also run
+`SITE_URL=http://localhost:8080 node scripts/seo-browser-test.cjs` (append the
+deployment prefix if used). This checks metadata, the badge at 320–1440px in both
+themes, its offline fallback, and no-JS rendering. It mocks the counter service
+so testing does not inflate visits.
 
 ## Build and deploy
 
@@ -102,6 +118,37 @@ that artifact, or publish its contents to your Pages branch. Use
 user/organization site or custom domain served at `/`. The prefix changes URLs,
 not the output directory structure. Rebuild when the deployment prefix changes.
 The same prefix must be supplied to the local preview command.
+
+### SEO and the visits badge
+
+For production, supply the public **HTTPS origin** (no project path):
+
+```bash
+make build SITE_URL=https://example.com BASE_PATH=/guide/ VISITOR_BADGE=true
+```
+
+Every chapter has its own descriptive title and summary. Production builds also
+include canonical URLs, Open Graph/Twitter metadata, a 1200×630 sharing image,
+JSON-LD, `sitemap.xml`, and `robots.txt`. The 404 page is marked `noindex` and
+excluded from the sitemap. Without `SITE_URL`, local builds omit absolute URLs
+and discovery files rather than advertising an incorrect domain. GitHub Pages
+deployment supplies its configured origin and project prefix automatically.
+`robots.txt` is only automatically discovered at the domain root; for a project
+site, submit its sitemap URL directly in Google Search Console/Bing Webmaster
+Tools if you cannot edit the root robots file.
+
+`VISITOR_BADGE=true` enables a custom-styled top-right **visits** badge backed by
+the external hits.sh SVG counter. All chapters share one site-wide counter;
+local builds disable it by default and 404s do not count. It is an approximate
+image-load count, **not unique visitors**: reloads, bots, browser caching, and
+blockers affect it. Counts start when enabled; no historical traffic is recovered.
+The visitor's browser contacts hits.sh (revealing its IP to that provider), with
+no referrer sent. No API key is needed, but availability and counting accuracy
+depend on the provider. If blocked or offline, the badge shows “Visits unavailable”
+with JavaScript enabled. Disable it with `VISITOR_BADGE=false` (also in the Pages
+workflow). Reading progress remains entirely local and unrelated to this counter.
+The sharing image is committed, so deployment needs no image tools; optionally
+regenerate it with `python3 scripts/social-card.py` (Pillow and Arial/DejaVu Sans).
 
 The Go generator uses embedded templates/assets but does not produce a deployed
 executable. Typography uses IBM Plex Sans and IBM Plex Mono, loaded from Google
@@ -146,7 +193,9 @@ Makefile.build     alternate entrypoint for the same static build targets
    `{{ define "chapter-your-slug" }} … {{ end }}` block.
 2. Add an entry to `Chapters` in `internal/content/chapters.go`. Its order defines
    numbering, the table of contents, and previous/next links automatically.
-3. Run `make check build` and deploy the rebuilt output.
+3. Add a question, explanation, and practice task keyed by its slug in
+   `internal/content/checkpoints.go`. Tests require a complete review for each chapter.
+4. Run `make check build` and deploy the rebuilt output.
 
 Interactive components use inline Alpine `x-data`; see
 `web/templates/chapters/03-bitwise-and-registers.html`. Use the `url` template
@@ -177,6 +226,14 @@ timers & PWM (dimmer) · UART (frame builder) · SPI & I²C.
 memory maps and datasheet jargon · bare-metal startup, memory layout, event loops,
 and equivalent C/Rust/Zig register-write snippets · build/flash/debug workflow ·
 a first NUCLEO-F401RE heartbeat project, from blocking delay to nonblocking timing.
+**Reliable Firmware** — button debouncing (sample explorer), watchdog health checks
+and safe recovery, DMA buffer ownership and overload, RTOS task scheduling and
+communication. **Reference** — a linked glossary of hardware, memory, signal,
+concurrency, and reliability terms. The guide now contains 24 chapters; original
+chapter slugs and numbers remain unchanged.
+
+Jay's X profile is in the shared footer on the overview, every chapter, and the
+404 page; the homepage retains the author introduction without duplicating it.
 
 ### A beginner's fast path
 

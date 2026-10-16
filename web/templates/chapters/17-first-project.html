@@ -72,6 +72,7 @@ if ((uint32_t)(now - last_toggle) &gt;= 500U) {
   </ul>
   <p>No blink? Check the data cable, power jumpers, ST-LINK detection, and programming result first. Confirm execution is not halted at a breakpoint. Inspect clock initialization, GPIO peripheral-clock enable, PA5 output mode, pin labels, and LED active level. If delays never finish, check that the HAL tick advances. Debug reset behavior can differ from a physical reset.</p>
   <p>A multimeter can check low-voltage board power or a slowly held GPIO level against board GND; avoid shorts and never probe mains. UART logging is optional, not required evidence of success. See <a href="{{ url "/chapter/build-flash-debug/" }}">build, flash, and debug</a> if the programming path is unclear.</p>
+  <p><strong>Official references:</strong> use the <a href="https://www.st.com/en/evaluation-tools/nucleo-f401re.html">NUCLEO-F401RE documentation</a> for UM1724 and board schematics, the <a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f401re.html">STM32F401RE documentation</a> for its datasheet, RM0368, and errata, and the <a href="https://www.st.com/en/development-tools/stm32cubeide.html">STM32CubeIDE tools page</a> for installation and supported environments. Record your IDE and STM32F4 package versions when reproducing the exercise.</p>
   <div class="takeaway"><strong>Self-check:</strong> why does a 500-millisecond toggle produce a one-second cycle? What work can now run between transitions? Explain why power, programming, and execution are three separate checks.</div>
 </section>
 

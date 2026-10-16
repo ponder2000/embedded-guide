@@ -11,8 +11,10 @@ import (
 func main() {
 	output := flag.String("out", "dist", "output directory (empty or a previous verified build)")
 	base := flag.String("base-path", "", "deployment URL prefix, e.g. /visual-guide/")
+	origin := flag.String("site-url", "", "public HTTPS origin for SEO, e.g. https://example.com")
+	badge := flag.Bool("visitor-badge", false, "show a third-party hits.sh site visits badge (requires -site-url)")
 	flag.Parse()
-	files, err := site.Generate(*base)
+	files, err := site.GenerateWithOptions(site.Options{BasePath: *base, SiteURL: *origin, VisitorBadge: *badge})
 	if err != nil {
 		log.Fatal(err)
 	}

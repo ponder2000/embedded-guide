@@ -37,7 +37,7 @@ jobs:
         run: go test ./...
 
       - name: Generate dist
-        run: make build BASE_PATH="${{ steps.pages.outputs.base_path }}/"
+        run: make build BASE_PATH="${{ steps.pages.outputs.base_path }}/" SITE_URL="${{ steps.pages.outputs.origin }}" VISITOR_BADGE=true
 
       - name: Upload dist
         uses: actions/upload-pages-artifact@v3

@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-{{ template "head" (printf "%d · Embedded Guide" .Code) }}
+{{ template "head" .SEO }}
 </head>
 <body>
-{{ template "topbar" "" }}
+{{ template "topbar" .SEO }}
 <div class="container">
   <div class="error-wrap">
     <div class="error-code">{{ .Code }}</div>

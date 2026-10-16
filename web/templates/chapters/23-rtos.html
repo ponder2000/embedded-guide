@@ -1,0 +1,42 @@
+{{- define "chapter-rtos" -}}
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>A scheduler is <em>a tool, not a requirement</em></h2>
+  <p class="subhead">A real-time operating system organizes firmware into independently scheduled tasks. It can make multiple activities easier to express, but it adds stacks, synchronization, scheduling rules, and new failure modes. A small nonblocking main loop may still be the clearest design.</p>
+  <p>Start with <a href="{{ url "/chapter/bare-metal-firmware/" }}">bare-metal event loops</a>, <a href="{{ url "/chapter/interrupts/" }}">interrupts</a>, and <a href="{{ url "/chapter/watchdogs/" }}">health supervision</a>. Real-time means meeting defined timing constraints, not merely running fast. Using an RTOS does not by itself prove a deadline will be met.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 190" role="img" aria-label="A task moves from ready to running when scheduled, blocks waiting for an event, and becomes ready again when the event arrives">
+      <g fill="var(--paper)" stroke="var(--ink)"><rect x="20" y="35" width="160" height="60"/><rect x="240" y="35" width="160" height="60"/><rect x="460" y="35" width="160" height="60"/></g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="14"><text x="100" y="71">Ready</text><text x="320" y="71">Running</text><text x="540" y="71">Blocked</text></g>
+      <g fill="none" stroke="var(--accent)" stroke-width="2"><path d="M180 65H240M400 65H460M540 95V140H100V95"/></g>
+      <g fill="var(--ink-soft)" text-anchor="middle" font-size="12"><text x="210" y="25">scheduled</text><text x="430" y="25">wait</text><text x="320" y="165">event or timeout makes the task ready—not necessarily running</text></g>
+    </svg>
+  </div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Let waiting tasks <em>stop competing</em></h2>
+  <p>In a typical single-core priority-based preemptive design, the scheduler runs the highest-priority ready task. A task blocked on a queue, notification, or timeout is not ready. When its event arrives, it becomes ready; it runs when scheduling rules allow.</p>
+  <p>A high-priority loop that continuously polls an empty queue can starve lower-priority work. Prefer a blocking wait with a bounded timeout where appropriate. Equal-priority time slicing, if configured, does not rescue lower-priority tasks from a permanently ready higher-priority task. Priority number conventions differ between kernels and interrupt controllers: check what a larger number means.</p>
+  <p>Periodic work should use the kernel's periodic-delay facility when appropriate rather than adding a relative sleep after every execution; relative delays accumulate execution-time drift. Tick frequency, rounding, interrupt latency, long critical sections, and other ready tasks affect actual timing. A delay is not a precise hardware waveform generator.</p>
+  <div class="takeaway"><strong>Budget before prioritizing:</strong> identify periods, worst-case execution time, deadlines, and acceptable blocking. Assigning every task a high priority creates no additional CPU capacity.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Communicate with <em>ownership rules</em></h2>
+  <p>For a sensor → logger pipeline, let the sensor task produce messages and the logger task own the output peripheral. A queue gives a bounded place to transfer work. Define capacity and a full-queue policy: wait within a deadline, reject/drop with a counter, or replace an old value if only the newest measurement matters.</p>
+  <p>In FreeRTOS, queues copy the configured item bytes. Queuing a pointer copies the pointer, not the pointed-to data. Its buffer must remain valid and its ownership explicit until the receiver finishes. Large messages may be better represented by a fixed buffer pool with a documented return path.</p>
+  <p>A mutex protects a shared resource and has an owner. In kernels that support it, priority inheritance can reduce priority inversion when a high-priority task waits on a resource held by a lower-priority task. It does not eliminate deadlocks, make long lock holds safe, or replace a consistent lock order. A binary semaphore is not automatically a mutex with inheritance.</p>
+  <p>ISRs must use the kernel's documented interrupt-safe APIs and obey the port's interrupt-priority restrictions. In FreeRTOS those APIs commonly have an <code>FromISR</code> suffix and cannot block. Request a context switch using the port's prescribed mechanism when required; never take a task-owned mutex from an ISR.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Make resource limits <em>visible</em></h2>
+  <ul><li><strong>Stacks:</strong> every task needs a bounded stack. Check API units—FreeRTOS task stack depths are expressed in StackType_t elements, not universally bytes. Measure high-water marks under representative stress and retain margin.</li><li><strong>Memory:</strong> choose static allocation or a deliberate allocation strategy. Handle allocation failure; do not assume an embedded heap is unlimited.</li><li><strong>Overload:</strong> track missed deadlines, queue saturation, buffer exhaustion, and dropped messages.</li><li><strong>Recovery:</strong> supervise critical tasks' useful progress, not just whether a scheduler tick continues.</li></ul>
+  <p>Test delayed consumers, queue-full conditions, a stalled high-priority task, and missing events. Start with two tasks and one explicit handoff, not a task per function. Keep the nonblocking heartbeat from the first project as a baseline for deciding whether an RTOS makes your design clearer.</p>
+  <p><strong>Official references:</strong> consult <a href="https://www.freertos.org/">FreeRTOS documentation</a> and the <a href="https://github.com/FreeRTOS/FreeRTOS-Kernel">FreeRTOS kernel source</a> for task states, queues, mutexes, allocation, and your selected Cortex-M port. Pin the kernel version and configuration used by your project.</p>
+</section>
+{{- end -}}

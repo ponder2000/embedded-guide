@@ -80,3 +80,34 @@ func TestBeginnerLearningPath(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryChapterHasReview(t *testing.T) {
+	for _, chapter := range Chapters {
+		if chapter.LearningMinutes <= 0 {
+			t.Errorf("%s needs a positive learning-time estimate", chapter.Slug)
+		}
+		review := chapter.Review()
+		if review.Question == "" || review.Answer == "" || review.Practice == "" {
+			t.Errorf("%s is missing its question, explanation, or practice", chapter.Slug)
+		}
+	}
+	for slug := range checkpoints {
+		if _, _, ok := Find(slug); !ok {
+			t.Errorf("review belongs to unregistered chapter %s", slug)
+		}
+	}
+}
+
+func TestReliableFirmwarePath(t *testing.T) {
+	_, previous, _ := Find("first-project")
+	for _, slug := range []string{"debouncing", "watchdogs", "dma", "rtos", "glossary"} {
+		chapter, number, ok := Find(slug)
+		if !ok || number <= previous || chapter.Template != "chapter-"+slug {
+			t.Errorf("missing or incorrectly ordered follow-up lesson %s", slug)
+		}
+		if slug != "glossary" && chapter.Part != "Reliable Firmware" {
+			t.Errorf("%s should be in Reliable Firmware", slug)
+		}
+		previous = number
+	}
+}

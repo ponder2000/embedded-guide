@@ -3,6 +3,16 @@
   "use strict";
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  // A blocked/offline counter must never display an invented zero or broken image.
+  $$(".visitor-badge img").forEach(image => {
+    const unavailable = () => {
+      image.hidden = true;
+      image.style.display = "none";
+      image.nextElementSibling.hidden = false;
+    };
+    image.addEventListener("error", unavailable, { once: true });
+    if (image.complete && !image.naturalWidth) unavailable();
+  });
   const defaults = { theme: "system", sound: false, tracking: true };
   let preferences = { ...defaults }, progress = {}, db = null, audio = null;
   let storageReady = false, channel = null, lastSound = 0, resetUntil = 0;

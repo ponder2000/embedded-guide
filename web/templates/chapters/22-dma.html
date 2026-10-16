@@ -1,0 +1,41 @@
+{{- define "chapter-dma" -}}
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>Move data. <em>Stop copying every byte.</em></h2>
+  <p class="subhead">Direct memory access lets a hardware engine move data between supported endpoints while the CPU does other work. A peripheral produces or consumes transfer requests; DMA moves configured units and reports progress or errors.</p>
+  <p>Read <a href="{{ url "/chapter/memory-map/" }}">memory-mapped I/O</a>, <a href="{{ url "/chapter/interrupts/" }}">interrupts</a>, and <a href="{{ url "/chapter/uart/" }}">UART</a> first. A UART receive register copied into a RAM buffer is a useful model, but peripheral request mappings and accessible memories are specific to the MCU.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 640 190" role="img" aria-label="A peripheral requests DMA transfers into RAM while the CPU performs other work and later processes a completed buffer">
+      <g fill="var(--paper)" stroke="var(--ink)"><rect x="15" y="35" width="170" height="65"/><rect x="235" y="35" width="170" height="65"/><rect x="455" y="35" width="170" height="65"/></g>
+      <g fill="var(--ink)" text-anchor="middle" font-size="14"><text x="100" y="73">Peripheral register</text><text x="320" y="73">DMA engine</text><text x="540" y="73">RAM buffer</text><text x="320" y="155">CPU: configure → do other work → consume safely</text></g>
+      <path d="M185 67H235M405 67H455" stroke="var(--accent)" stroke-width="3"/>
+    </svg>
+  </div>
+  <p>DMA reduces CPU involvement per transferred unit; it does not eliminate bus traffic, latency, or software work. The CPU and DMA may compete for memory bandwidth. A slow consumer can still lose data.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Configuration is <em>a contract</em></h2>
+  <ul><li><strong>Endpoints and direction:</strong> which peripheral register and which memory region? Is that region reachable by this DMA engine?</li><li><strong>Transfer width and count:</strong> are units bytes, halfwords, or words? A count of 128 transfers is not always 128 bytes.</li><li><strong>Increment:</strong> a UART data register commonly stays fixed while the RAM address advances.</li><li><strong>Request mapping:</strong> select the documented stream/channel/request and the peripheral's DMA-request enable.</li><li><strong>Mode and completion:</strong> choose normal, circular, or a supported double-buffer mode, and handle error status as well as success.</li></ul>
+  <p>Validate alignment, buffer size, lifetime, and peripheral access width before enabling a transfer. Keep the buffer alive until the transfer is finished or safely cancelled. A stack buffer that goes out of scope while asynchronous DMA still uses it is a memory-lifetime bug, even if it appeared to work once.</p>
+  <div class="takeaway"><strong>Follow the device's order:</strong> configuration, flag clearing, request enable, and stream enable/disable sequences are not portable. Use the selected driver API or the exact reference manual, not an invented universal sequence.</div>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>The hard part is <em>ownership</em></h2>
+  <p>For transmission, the CPU fills a buffer and hands it to DMA; it must not change those bytes until ownership returns. For reception, DMA fills a region and the CPU consumes it only after the relevant handoff. DMA transfer complete may mean the last value reached the peripheral register, not that a UART's final stop bit has left the pin: peripheral transmission-complete status answers that different question.</p>
+  <p>With a two-half circular receive buffer, half-transfer and transfer-complete notifications can identify regions that were just filled. They do not stop the DMA engine from wrapping around and overwriting a region later. The CPU must finish before reuse, or copy into separately owned storage. Define what happens if it cannot keep up: drop with a counter, apply supported flow control, or stop/restart through a documented recovery path.</p>
+  <p>On a cache-equipped MCU, CPU caches and DMA may not be coherent. Use suitable memory regions or the required clean/invalidate operations with cache-line alignment and ownership discipline. Do not invalidate cache lines containing unrelated dirty data. The STM32F401's Cortex-M4 core has no data cache, but that fact must not be generalized to other Cortex-M devices.</p>
+  <p><code>volatile</code> does not establish buffer ownership, make an ISR handoff atomic, or perform cache maintenance. Ordering and synchronization requirements still apply; use your driver and target's documented mechanisms.</p>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Test throughput <em>and overload</em></h2>
+  <p>At 115200 baud with 8N1 framing, ideal payload throughput is 11520 bytes/s. A 128-byte region fills in about 11.1 ms under continuous traffic. In a circular buffer with two 128-byte halves, software has roughly one half-fill interval to finish a half before the next wrap begins reusing it—not an unlimited amount of time after the interrupt.</p>
+  <ul><li>Verify a known pattern and exact transfer count, including partial and final transfers.</li><li>Delay the consumer deliberately and verify your overrun policy and diagnostic counters.</li><li>Test transfer errors, cancellation, and a restart without stale flags or invalid ownership.</li><li>Keep completion handlers short; notify foreground work or a task rather than parsing a large message in the ISR.</li></ul>
+  <p><strong>Official reference:</strong> use the DMA, bus architecture, and selected peripheral chapters of RM0368 from the <a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f401re.html">STM32F401RE documentation</a>. Request routing, transfer width, and available memory must match that exact device.</p>
+</section>
+{{- end -}}

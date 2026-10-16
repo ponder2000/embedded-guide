@@ -2,11 +2,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-{{ template "head" "Embedded Systems · A Visual Guide" }}
+{{ template "head" .SEO }}
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
-{{ template "topbar" "LEARN BY SEEING" }}
+{{ template "topbar" .SEO }}
 
 <div class="guide-layout">
   {{ template "sidebar" . }}
@@ -14,7 +14,7 @@
     <header class="landing-hero">
       <div class="hero-copy">
       <div class="eyebrow">Small chips. Big ideas.</div>
-      <h1>Make the<br><em>invisible click.</em></h1>
+      <h1>Embedded systems.<br><em>Make the invisible click.</em></h1>
       <p class="landing-intro">From a line of code to a live pin. Explore the circuits, bits, and signals behind embedded systems—one visual experiment at a time.</p>
       <div class="hero-actions">
         <a class="btn btn-accent" href="{{ url "/chapter/what-is-embedded/" }}">Start learning <span aria-hidden="true">→</span></a>
@@ -76,6 +76,13 @@
       </div>
     </section>
 
+    <section class="landing-section" aria-labelledby="guide-scope">
+      <h2 id="guide-scope">From browser experiments <em>to a real board</em></h2>
+      <p>Start with electronics, bits, and C; then explore registers, timing, and communication. Already comfortable with code? Jump to <a href="{{ url "/chapter/mcu-datasheet/" }}">reading an MCU datasheet</a> and follow the practical chapters through your <a href="{{ url "/chapter/first-project/" }}">first NUCLEO-F401RE heartbeat</a>.</p>
+      <p>After your first blink, build reliability with <a href="{{ url "/chapter/debouncing/" }}">button debouncing</a>, <a href="{{ url "/chapter/watchdogs/" }}">watchdog recovery</a>, <a href="{{ url "/chapter/dma/" }}">DMA buffer ownership</a>, and <a href="{{ url "/chapter/rtos/" }}">RTOS fundamentals</a>. Use the <a href="{{ url "/chapter/glossary/" }}">linked glossary</a> whenever a term needs unpacking.</p>
+      <p>Diagrams and simulations are simplified learning models, not electrical validation or hardware emulation. Most lessons need only a browser; the final hardware project needs the named board and toolchain. Always check the exact device datasheet before wiring or writing registers.</p>
+    </section>
+
     <details class="landing-section experiment-preview">
       <summary>Try a 10-second experiment <span aria-hidden="true">↗</span></summary>
     <section class="quick-check" aria-labelledby="check-heading">
@@ -86,7 +93,6 @@
     </details>
     <aside class="author-note" aria-label="A note from Jay">
       <p>I'm Jay, a software engineer with years of experience in software development and a curiosity for embedded systems. I created this site to make the mental models behind embedded systems easier to understand—a free handbook to help you get going.</p>
-      <a href="https://x.com/chotathanos" rel="me">Find me on X · @chotathanos ↗</a>
     </aside>
   </main>
 </div>

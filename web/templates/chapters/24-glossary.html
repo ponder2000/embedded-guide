@@ -1,0 +1,60 @@
+{{- define "chapter-glossary" -}}
+<section>
+  <div class="section-number">SECTION 01</div>
+  <h2>The hardware <em>vocabulary</em></h2>
+  <p class="subhead">Quick definitions, with links back to the lessons that build the full mental model. Addresses, electrical limits, and access rules always belong to an exact device—not to a generic term.</p>
+  <nav class="glossary-jumps" aria-label="Glossary groups"><a href="#mcu">Hardware</a><a href="#mmio">Memory and startup</a><a href="#gpio">Signals and timing</a><a href="#atomicity">Concurrency and reliability</a></nav>
+  <dl class="glossary">
+    <dt id="mcu">MCU · microcontroller</dt><dd>A chip integrating a processor core, memory, and peripherals for control applications. <a href="{{ url "/chapter/what-is-embedded/" }}">Meet the MCU →</a></dd>
+    <dt id="core">CPU core</dt><dd>The instruction-executing engine, such as a Cortex-M4. Its name alone does not specify a chip's flash size or pinout. <a href="{{ url "/chapter/mcu-datasheet/" }}">Core vs chip vs board →</a></dd>
+    <dt id="peripheral">Peripheral</dt><dd>A hardware function such as GPIO, a timer, or UART, usually controlled through registers. <a href="{{ url "/chapter/memory-map/" }}">Accessing peripherals →</a></dd>
+    <dt id="datasheet">Datasheet / reference manual / errata</dt><dd>The datasheet specifies the device and electrical limits; the reference manual explains operation and registers; errata describe known limitations and workarounds. <a href="{{ url "/chapter/mcu-datasheet/" }}">Find the right document →</a></dd>
+    <dt id="ground">Ground · GND</dt><dd>The circuit's voltage reference, not automatically earth ground or a promise of electrical safety. Signal connections need an appropriate common reference. <a href="{{ url "/chapter/electronics-essentials/" }}">Electrical essentials →</a></dd>
+    <dt id="pull-up">Pull-up / pull-down</dt><dd>A resistor or configured internal circuit that biases a released input toward a defined level. Strength, leakage, and capacitance affect behavior. <a href="{{ url "/chapter/gpio/" }}">GPIO input states →</a></dd>
+  </dl>
+</section>
+
+<section>
+  <div class="section-number">SECTION 02</div>
+  <h2>Memory <em>and startup</em></h2>
+  <dl class="glossary">
+    <dt id="mmio">MMIO · memory-mapped I/O</dt><dd>Peripheral registers occupy addresses in the processor's memory map; accessing them can cause hardware side effects. <a href="{{ url "/chapter/memory-map/" }}">Memory maps →</a></dd>
+    <dt id="register">Register / bit field</dt><dd>A hardware control or status location and a group of bits within it. Access width and read/write semantics matter as much as its address. <a href="{{ url "/chapter/bitwise-and-registers/" }}">Bits and registers →</a></dd>
+    <dt id="w1c">W1C · write one to clear</dt><dd>A flag access rule where writing a one clears that flag. Blind read-modify-write can accidentally clear other set flags. <a href="{{ url "/chapter/mcu-datasheet/" }}">Register access rules →</a></dd>
+    <dt id="flash">Flash / SRAM</dt><dd>Flash is nonvolatile storage commonly used for code; SRAM is volatile working memory. Their addresses, access properties, and capacities are device-specific. <a href="{{ url "/chapter/memory-map/" }}">Memory regions →</a></dd>
+    <dt id="linker">Linker script / linker map</dt><dd>A script describes image placement and memory layout; a map reports where linked code and data ended up. <a href="{{ url "/chapter/build-flash-debug/" }}">Build artifacts →</a></dd>
+    <dt id="startup">Vector table / reset handler</dt><dd>On Cortex-M, the vector table supplies the initial stack pointer and handler entries. The reset handler establishes the runtime before application code. <a href="{{ url "/chapter/boot-sequence/" }}">The boot sequence →</a></dd>
+    <dt id="data-bss">.data / .bss</dt><dd>Sections commonly holding initialized writable objects and zero-initialized objects. Startup copies initial .data values and clears .bss in RAM. <a href="{{ url "/chapter/bare-metal-firmware/" }}">Runtime initialization →</a></dd>
+  </dl>
+</section>
+
+<section>
+  <div class="section-number">SECTION 03</div>
+  <h2>Signals <em>and timing</em></h2>
+  <dl class="glossary">
+    <dt id="gpio">GPIO · general-purpose input/output</dt><dd>A configurable digital pin interface; mode, pulls, voltage tolerance, and alternate functions depend on the device. <a href="{{ url "/chapter/gpio/" }}">Talking to a pin →</a></dd>
+    <dt id="interrupt">Interrupt / ISR / NVIC</dt><dd>An interrupt requests exceptional execution; its interrupt service routine handles the event. The NVIC manages interrupt enable, priority, and pending state on Cortex-M. <a href="{{ url "/chapter/interrupts/" }}">Interrupt handling →</a></dd>
+    <dt id="prescaler">Prescaler</dt><dd>A divider used to derive a slower clock. Register encodings may represent divisor minus one; consult the specific clock or timer. <a href="{{ url "/chapter/clocks/" }}">Clock derivation →</a></dd>
+    <dt id="pwm">PWM · pulse-width modulation</dt><dd>A repeating pulse waveform whose active fraction is its duty cycle. Frequency and duty are different parameters. <a href="{{ url "/chapter/timers-pwm/" }}">Timers and PWM →</a></dd>
+    <dt id="uart">UART / baud / 8N1</dt><dd>A serial interface; baud is symbol rate. Common 8N1 framing carries eight data bits, no parity, and one stop bit, plus a start bit: ten bit times per byte. <a href="{{ url "/chapter/uart/" }}">UART frames →</a></dd>
+    <dt id="spi-i2c">SPI / I²C</dt><dd>Synchronous serial interfaces: conventional SPI uses clock, data, and chip select; I²C uses shared open-drain clock/data lines and addressed transactions. <a href="{{ url "/chapter/spi-i2c/" }}">Comparing buses →</a></dd>
+    <dt id="adc">ADC / quantization / reference</dt><dd>An analog-to-digital converter maps an input to finite codes relative to a reference. Quantization is only one contributor to measurement error. <a href="{{ url "/chapter/adc/" }}">Analog sampling →</a></dd>
+    <dt id="debounce">Debouncing</dt><dd>Qualifying a noisy switch input before accepting a state transition. A recognized long press is a separate interpretation of a debounced state. <a href="{{ url "/chapter/debouncing/" }}">Button filtering →</a></dd>
+  </dl>
+</section>
+
+<section>
+  <div class="section-number">SECTION 04</div>
+  <h2>Concurrency <em>and reliability</em></h2>
+  <dl class="glossary">
+    <dt id="atomicity">Atomicity</dt><dd>An operation appears indivisible to the relevant observers. A load being atomic does not make a load-modify-store sequence atomic. <a href="{{ url "/chapter/embedded-c/" }}">Types, accesses, and races →</a></dd>
+    <dt id="volatile">volatile</dt><dd>A language qualifier used for required observable accesses, including appropriate MMIO usage. It does not provide mutual exclusion, general inter-thread synchronization, or cache coherence. <a href="{{ url "/chapter/low-power-volatile/" }}">What volatile does →</a></dd>
+    <dt id="dma">DMA · direct memory access</dt><dd>A hardware engine moving data between supported endpoints without CPU instructions copying each unit. Buffers still need lifetime and ownership rules. <a href="{{ url "/chapter/dma/" }}">DMA handoffs →</a></dd>
+    <dt id="watchdog">Watchdog</dt><dd>A timer requiring valid refresh behavior to avoid recovery, often a reset. Refresh should reflect useful progress, not merely an executing interrupt. <a href="{{ url "/chapter/watchdogs/" }}">Failure recovery →</a></dd>
+    <dt id="rtos">RTOS / task / scheduler</dt><dd>A real-time operating system schedules tasks, each with execution context and usually its own stack. Task design still needs timing and resource budgets. <a href="{{ url "/chapter/rtos/" }}">RTOS fundamentals →</a></dd>
+    <dt id="queue">Queue / mutex</dt><dd>A queue transfers bounded items between contexts; a mutex provides ownership-based exclusion for a shared resource. Pointer messages still need buffer-lifetime rules. <a href="{{ url "/chapter/rtos/" }}">Communication and ownership →</a></dd>
+    <dt id="priority-inversion">Priority inversion</dt><dd>A higher-priority task waits on a resource held by lower-priority work. Priority inheritance can reduce some blocking but does not prevent deadlock. <a href="{{ url "/chapter/rtos/" }}">Priority and locking →</a></dd>
+    <dt id="latency">Latency / deadline / jitter</dt><dd>Latency is delay from event to response; a deadline bounds required completion time; jitter is variation in timing. Average speed alone does not establish any of them. <a href="{{ url "/chapter/rtos/" }}">Timing budgets →</a></dd>
+  </dl>
+</section>
+{{- end -}}

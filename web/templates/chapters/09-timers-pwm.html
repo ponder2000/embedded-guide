@@ -8,7 +8,7 @@
   <ul>
     <li>The <strong>prescaler</strong> (<code>PSC</code>) divides the incoming clock — the same clock tree you met in the clocks chapter. A 72&nbsp;MHz timer clock with <code>PSC = 71</code> ticks the counter at 1&nbsp;MHz.</li>
     <li>The <strong>counter</strong> (<code>CNT</code>) climbs one step per tick: 0, 1, 2, &hellip;</li>
-    <li>The <strong>auto-reload</strong> (<code>ARR</code>) is the ceiling. When <code>CNT</code> reaches <code>ARR</code> it wraps back to 0 — an <em>update event</em> — and can fire an interrupt.</li>
+    <li>The <strong>auto-reload</strong> (<code>ARR</code>) is the ceiling. In this edge-aligned upcounting model, the counter includes both 0 and ARR, then wraps to 0 on the next tick — an <em>update event</em> that can request an interrupt when enabled.</li>
   </ul>
 
   <div class="diagram-wrap">
@@ -20,7 +20,7 @@
 
       <!-- ARR ceiling -->
       <line x1="50" y1="50" x2="560" y2="50" stroke="#B8521E" stroke-width="1.2" stroke-dasharray="5 4"/>
-      <text x="556" y="44" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">CNT = ARR  →  wrap + IRQ</text>
+      <text x="556" y="44" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#B8521E">After ARR: next tick → wrap</text>
       <text x="44" y="54" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">ARR</text>
       <text x="44" y="184" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4A4339">0</text>
 
@@ -32,12 +32,12 @@
       <circle cx="350" cy="50" r="3.5" fill="#B8521E"/>
       <circle cx="500" cy="50" r="3.5" fill="#B8521E"/>
 
-      <text x="300" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">CNT ramps up, hits ARR, wraps to 0 — a perfectly periodic sawtooth.</text>
+      <text x="300" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-style="italic" fill="#4A4339">CNT counts 0 through ARR, then wraps — ARR + 1 ticks per period.</text>
     </svg>
   </div>
 
   <div class="takeaway">
-    <strong>The period in plain arithmetic:</strong> with a timer clock <code>f<sub>tim</sub></code>, one wrap takes <code>(PSC + 1) &times; (ARR + 1) / f<sub>tim</sub></code> seconds. Pick <code>PSC</code> for a convenient tick, then <code>ARR</code> for the period you want.
+    <strong>The period in plain arithmetic:</strong> with a timer clock <code>f<sub>tim</sub></code>, one wrap takes <code>(PSC + 1) &times; (ARR + 1) / f<sub>tim</sub></code> seconds. Pick <code>PSC</code> for a convenient tick, then <code>ARR</code> for the period you want. This formula assumes edge-aligned upcounting; center-aligned and other modes differ. The timer input clock is not always the CPU or APB clock: check your MCU's clock tree and timer clock multiplier rules.
   </div>
 </section>
 
@@ -79,7 +79,7 @@
     </svg>
   </div>
 
-  <p>Below, you are the firmware. Drag <code>CCR</code> as a percentage of the period and watch the output pulse and the LED respond exactly as silicon would.</p>
+  <p>Below, you are the firmware. Drag <code>CCR</code> as a percentage of the period to explore an idealized active-high PWM output. Real output polarity, pin alternate-function setup, register preload, and LED brightness perception require additional care. A 100% output may require CCR = ARR + 1 or a forced-active mode if that value does not fit the register.</p>
 
   <div class="interactive" data-simulation="pwm" data-simulation-name="PWM output"
        x-data="{

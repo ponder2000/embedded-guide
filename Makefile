@@ -1,6 +1,8 @@
 # Static site development. Go is the only required build tool.
 OUT       ?= dist
 BASE_PATH ?=
+SITE_URL  ?=
+VISITOR_BADGE ?= false
 PORT      ?= 8080
 AIR       := $(shell command -v air 2>/dev/null)
 
@@ -9,7 +11,7 @@ AIR       := $(shell command -v air 2>/dev/null)
 
 ## build: generate the deployable site (OUT=dist BASE_PATH=)
 build:
-	@go run ./cmd/build -out "$(OUT)" -base-path "$(BASE_PATH)"
+	@go run ./cmd/build -out "$(OUT)" -base-path "$(BASE_PATH)" -site-url "$(SITE_URL)" -visitor-badge=$(VISITOR_BADGE)
 
 ## run: build and preview locally (PORT=8080)
 run: build
@@ -25,7 +27,7 @@ ifeq ($(AIR),)
 	@echo "Air not installed; building and previewing once. Use make tools for watch mode."
 	@$(MAKE) --no-print-directory run
 else
-	@OUT="$(OUT)" BASE_PATH="$(BASE_PATH)" PORT="$(PORT)" air -c .air.toml
+	@OUT="$(OUT)" BASE_PATH="$(BASE_PATH)" SITE_URL="$(SITE_URL)" VISITOR_BADGE="$(VISITOR_BADGE)" PORT="$(PORT)" air -c .air.toml
 endif
 
 ## fmt: format Go sources

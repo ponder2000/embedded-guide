@@ -2,6 +2,7 @@ package site_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -212,6 +213,73 @@ func TestBeginnerLessonsHaveCompleteSections(t *testing.T) {
 		}
 		if !strings.Contains(body, `role="img"`) || !strings.Contains(body, `aria-label=`) {
 			t.Errorf("%s is missing an accessible visual explanation", slug)
+		}
+	}
+}
+
+func TestReviewsGlossaryAndSharedFooter(t *testing.T) {
+	for _, base := range []string{"", "/visual-guide"} {
+		files, err := site.Generate(base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, data := range files {
+			if !strings.HasSuffix(name, ".html") {
+				continue
+			}
+			body := string(data)
+			footer := regexp.MustCompile(`(?s)<footer>(.*?)</footer>`).FindStringSubmatch(body)
+			if len(footer) != 2 || !strings.Contains(footer[1], `href="https://x.com/chotathanos" rel="me"`) || strings.Count(body, `href="https://x.com/chotathanos"`) != 1 {
+				t.Errorf("%s should have exactly one X link, in the shared footer", name)
+			}
+		}
+		home := string(files["index.html"])
+		for _, chapter := range content.Chapters {
+			body := string(files["chapter/"+chapter.Slug+"/index.html"])
+			if !strings.Contains(body, fmt.Sprintf("Estimated learning time: ~%d min", chapter.LearningMinutes)) || !strings.Contains(home, fmt.Sprintf(`<span class="sidebar-duration">~%d min</span>`, chapter.LearningMinutes)) {
+				t.Errorf("%s missing learning estimate in chapter or navigation", chapter.Slug)
+			}
+			if !strings.Contains(body, `class="chapter-checkpoint"`) || !strings.Contains(body, `Reveal the explanation`) || !strings.Contains(body, `href="`+base+`/chapter/glossary/"`) {
+				t.Errorf("%s missing shared review or glossary link", chapter.Slug)
+			}
+			// Reviews intentionally stay outside the article: existing section
+			// numbers and saved reading progress must not change.
+			articleEnd := strings.Index(body, "</article>")
+			if articleEnd < 0 {
+				t.Fatalf("%s missing tracked article", chapter.Slug)
+			}
+			if strings.Index(body, `class="chapter-checkpoint"`) < articleEnd {
+				t.Errorf("%s review changes tracked article structure", chapter.Slug)
+			}
+			article := body[:articleEnd]
+			count := strings.Count(article, "<section>")
+			marker := fmt.Sprintf(`data-chapter-link="%s" data-sections="%d"`, chapter.Slug, count)
+			if !strings.Contains(home, marker) {
+				t.Errorf("%s learning-map section count differs from article", chapter.Slug)
+			}
+		}
+		glossary := string(files["chapter/glossary/index.html"])
+		terms := regexp.MustCompile(`<dt id="([^"]+)">`).FindAllStringSubmatch(glossary, -1)
+		if len(terms) < 25 {
+			t.Error("glossary needs linked definitions across the guide")
+		}
+		seen := map[string]bool{}
+		for _, term := range terms {
+			if seen[term[1]] {
+				t.Errorf("duplicate glossary term anchor %s", term[1])
+			}
+			seen[term[1]] = true
+		}
+		for _, term := range []string{"mcu", "mmio", "gpio", "atomicity", "volatile", "dma", "watchdog", "rtos"} {
+			if !seen[term] {
+				t.Errorf("missing glossary anchor %s", term)
+			}
+		}
+		for _, slug := range []string{"debouncing", "watchdogs", "dma", "rtos"} {
+			body := string(files["chapter/"+slug+"/index.html"])
+			if strings.Count(body, `class="section-number"`) != 4 || !strings.Contains(body, `role="img"`) {
+				t.Errorf("%s needs four sections and an accessible diagram", slug)
+			}
 		}
 	}
 }

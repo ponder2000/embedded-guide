@@ -2,11 +2,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-{{ template "head" (printf "%02d · Embedded Guide" .Number) }}
+{{ template "head" .SEO }}
 </head>
 <body x-data>
 <a class="skip-link" href="#main-content">Skip to content</a>
-{{ template "topbar" (printf "CH %02d / %02d" .Number .Total) }}
+{{ template "topbar" .SEO }}
 
 <div class="guide-layout">
   {{ template "sidebar" . }}
@@ -15,11 +15,22 @@
 
   <div class="chapter-eyebrow">Chapter {{ printf "%02d" .Number }} · {{ .Chapter.Part }}</div>
   <h1 class="chapter-title">{{ safeHTML .Chapter.Title }}</h1>
+  <p class="chapter-summary">{{ .Chapter.Summary }}</p>
+  <p class="chapter-learning-time"><strong>Estimated learning time: ~{{ .Chapter.LearningMinutes }} min</strong><br>Reading, diagrams, experiments, and self-checks. Optional hardware work and tool setup take extra time.</p>
 
   <div class="chapter-reading-status" data-reading-summary aria-live="polite">Your progress is saved as you read.</div>
   <article data-chapter="{{ .Chapter.Slug }}">
     {{ partial .Chapter.Template . }}
   </article>
+
+  <aside class="chapter-checkpoint" aria-labelledby="checkpoint-heading">
+    <div class="eyebrow">Before you move on</div>
+    <h2 id="checkpoint-heading">Check your <em>mental model</em></h2>
+    <p>{{ .Chapter.Review.Question }}</p>
+    <details><summary>Reveal the explanation</summary><p>{{ .Chapter.Review.Answer }}</p></details>
+    <p><strong>Try it:</strong> {{ .Chapter.Review.Practice }}</p>
+    <p class="checkpoint-note">Ungraded practice, separate from reading progress. Need a definition? Open the <a href="{{ url "/chapter/glossary/" }}">glossary</a>.</p>
+  </aside>
 
   <nav class="chapter-nav">
     {{- if .Prev.Slug }}
